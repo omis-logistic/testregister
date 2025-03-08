@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base href="/">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Parcel Declaration</title>
+  <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Parcel Declaration Form</h1>
+    <form id="declarationForm">
+      <div class="form-group">
+        <label for="trackingNumber">Tracking Number:</label>
+        <input type="text" id="trackingNumber" name="trackingNumber" 
+               pattern="^[a-zA-Z0-9-]+$" 
+               title="No spaces or special characters allowed except hyphen" 
+               required>
+      </div>
+
+      <div class="form-group">
+        <label for="phone">Phone Number:</label>
+        <input type="tel" id="phone" name="phone" 
+               pattern="[0-9]{6,}" 
+               title="At least 6 digits" 
+               required>
+      </div>
+
+      <div class="form-group">
+        <label for="itemDescription">Item Description:</label>
+        <textarea id="itemDescription" name="itemDescription" required></textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="quantity">Quantity:</label>
+        <input type="number" id="quantity" name="quantity" 
+               min="1" step="1" required>
+      </div>
+
+      <div class="form-group">
+        <label for="price">Price:</label>
+        <input type="number" id="price" name="price" 
+               min="0" step="0.01" required>
+      </div>
+
+      <div class="form-group">
+        <label for="collectionPoint">Collection Point:</label>
+        <select id="collectionPoint" name="collectionPoint" required>
+          <option value="">Select Collection Point</option>
+          <option value="Rimba">Rimba</option>
+          <option value="Bengkurong">Bengkurong</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="itemCategory">Item Category:</label>
+        <select id="itemCategory" name="itemCategory" required>
+          <option value="">Select Category</option>
+          <option value="Accessories/Jewellery">Accessories/Jewellery</option>
+          <option value="Baby Appliances">Baby Appliances</option>
+          <option value="Bag">Bag</option>
+          <option value="Car Parts/Accessories">Car Parts/Accessories</option>
+          <option value="Carpets/Mat">Carpets/Mat</option>
+          <option value="Clothing">Clothing</option>
+          <option value="Computer Accessories">Computer Accessories</option>
+          <option value="Cordless">Cordless</option>
+          <option value="Decorations">Decorations</option>
+          <option value="Disposable Pad/Mask">Disposable Pad/Mask</option>
+          <option value="Electrical Appliances">Electrical Appliances</option>
+          <option value="Fabric">Fabric</option>
+          <option value="Fashion Accessories">Fashion Accessories</option>
+          <option value="Fishing kits/Accessories">Fishing kits/Accessories</option>
+          <option value="Footware Shoes/Slippers">Footware Shoes/Slippers</option>
+          <option value="Game/Console/Board">Game/Console/Board</option>
+          <option value="Hand Tools">Hand Tools</option>
+          <option value="Handphone Casing">Handphone Casing</option>
+          <option value="Headgear">Headgear</option>
+          <option value="Home Fitting/Furniture">Home Fitting/Furniture</option>
+          <option value="Kitchenware">Kitchenware</option>
+          <option value="LED/Lamp">LED/Lamp</option>
+          <option value="Matters/Bedding">Matters/Bedding</option>
+          <option value="Mix Item">Mix Item</option>
+          <option value="Motor Part/Accessories">Motor Part/Accessories</option>
+          <option value="Others">Others</option>
+          <option value="Perfume">Perfume</option>
+          <option value="Phone Accessories">Phone Accessories</option>
+          <option value="Plastic Article">Plastic Article</option>
+          <option value="RC Parts/Accessories">RC Parts/Accessories</option>
+          <option value="Rubber">Rubber</option>
+          <option value="Seluar">Seluar</option>
+          <option value="Socks">Socks</option>
+          <option value="Sport Equipment">Sport Equipment</option>
+          <option value="Stationery">Stationery</option>
+          <option value="Stickers">Stickers</option>
+          <option value="Storage">Storage</option>
+          <option value="Telkong">Telkong</option>
+          <option value="Toys">Toys</option>
+          <option value="Tudong">Tudong</option>
+          <option value="Tumbler">Tumbler</option>
+          <option value="Underwear">Underwear</option>
+          <option value="Watch & Accessories">Watch & Accessories</option>
+          <option value="Wire, Adapter & Plug">Wire, Adapter & Plug</option>
+          <!-- Starred Categories -->
+          <option value="*Books">*Books</option>
+          <option value="*Cosmetics/Skincare/Bodycare">*Cosmetics/Skincare/Bodycare</option>
+          <option value="*Food Beverage/Drinks">*Food Beverage/Drinks</option>
+          <option value="*Gadgets">*Gadgets</option>
+          <option value="*Oil Ointment">*Oil Ointment</option>
+          <option value="*Supplement">*Supplement</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="fileUpload">Upload Files (Max 3, Required for * Categories):</label>
+        <input type="file" id="fileUpload" name="files" 
+               multiple accept="image/*, .pdf" 
+               onchange="validateFiles(this)">
+        <small>Allowed formats: JPEG, PNG, PDF</small>
+      </div>
+
+      <div class="button-group">
+        <button type="submit" class="gold-button">Submit Declaration</button>
+        <button type="button" class="gold-button" disabled>Back to Dashboard</button>
+      </div>
+    </form>
+    <div id="message"></div>
+  </div>
+  
+  <script src="scripts/app.js"></script>
+  <script>
+    function validateFiles(input) {
+      const maxFiles = 3;
+      if (input.files.length > maxFiles) {
+        alert(`Maximum ${maxFiles} files allowed`);
+        input.value = '';
+      }
+    }
+  </script>
+</body>
+</html>
