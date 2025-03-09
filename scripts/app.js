@@ -91,7 +91,7 @@ async function processFiles(files) {
     type: file.type,
     data: await toBase64(file),
     size: file.size
-  }));
+  }))); // Added closing parenthesis
 }
 
 function toBase64(file) {
