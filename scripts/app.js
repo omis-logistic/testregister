@@ -243,27 +243,6 @@ async function submitForm(payload) {
   }
 }
 
-async function verifySubmission(trackingNumber) {
-  try {
-    const response = await fetch(`${PROXY_URL}?tracking=${encodeURIComponent(trackingNumber)}`);
-    const result = await response.json();
-    return { found: result.exists };
-  } catch (error) {
-    return { found: false };
-  }
-}
-
-// Add this verification function
-async function checkSubmissionStatus(trackingNumber) {
-  const ss = SpreadsheetApp.openById("1XGlYw_0Zn7MZAMVTBA-DHCvXVsdeSKYAh6KvzM3aEco");
-  const sheet = ss.getSheetByName("V2");
-  const data = sheet.getDataRange().getValues();
-  
-  const exists = data.some(row => row[2] === trackingNumber);
-  exists ? showMessage('Submission verified!', 'success') 
-         : showMessage('Verification failed', 'error');
-}
-
 function showMessage(text, type) {
   const messageDiv = document.getElementById('message');
   if (!messageDiv) {
