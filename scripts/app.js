@@ -222,6 +222,18 @@ function submitViaJsonp(payload) {
   document.body.appendChild(script);
 }
 
+function handleSuccess(response) {
+  showMessage(response.message, 'success');
+  console.log('Submission successful:', response);
+  document.getElementById('declarationForm').reset();
+}
+
+function handleFailure(response) {
+  const errorMessage = response?.error || 'Unknown server error';
+  showMessage(`Submission failed: ${errorMessage}`, 'error');
+  console.error('Submission failed:', response);
+}
+
 function handleGasResponse(response) {
   console.log('GAS Response:', response);
   if (response.success) {
