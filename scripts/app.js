@@ -205,32 +205,48 @@ function validatePhoneNumber(phone) {
 }
 
 async function submitForm(payload) {
-  const PROXY_URL = 'https://script.google.com/macros/s/AKfycby3dq0100KQ2nCIj5WdAsp1pYm66V6FItzfD1l1_8rcgXhfU3EpxCkU3Vo3V9GM36m9Rw/exec';
+  const PROXY_URL = 'https://script.google.com/macros/s/AKfycbzsdmgXy5JVsJtTvPwQppL8BMitkUk_yGLq-BXEDpzcMd-B47cUNUZjnBrRHs5tOyrQLA/exec';
   
   try {
-    // Create URL-encoded payload
-    const formData = new URLSearchParams();
+    const formData = new FormData();
     formData.append('payload', JSON.stringify(payload));
 
+    showMessage('Submitting...', 'pending');
+
+    // Submit with error handling
     const response = await fetch(PROXY_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
-      },
-      body: formData,
-      mode: 'no-cors' // Bypass CORS preflight
+      body: formData
     });
 
-    // Handle opaque response
-    if (!response.ok) throw new Error('Network error');
+    if (!response.ok) throw new Error('Submission failed');
     
-    // For no-cors mode, we can't read response body directly
-    // Add success tracking in spreadsheet
-    setTimeout(() => checkSubmissionStatus(payload.trackingNumber), 2000);
-    showMessage('Submission processing...', 'pending');
+    // Verify submission after short delay
+    setTimeout(async () => {
+      const verification = await verifySubmission(payload.trackingNumber);
+      verification.found ?
+        showMessage('Submission successful!', 'success') :
+        showMessage('Verification failed', 'error');
+    }, 3000);
 
   } catch (error) {
-    showMessage(`Submission failed: ${error.message}`, 'error');
+    showMessage('Finalizing submission...', 'pending');
+    setTimeout(async () => {
+      const verification = await verifySubmission(payload.trackingNumber);
+      verification.found ?
+        showMessage('Submission completed!', 'success') :
+        showMessage('Submission may not have completed', 'error');
+    }, 5000);
+  }
+}
+
+async function verifySubmission(trackingNumber) {
+  try {
+    const response = await fetch(`${PROXY_URL}?tracking=${encodeURIComponent(trackingNumber)}`);
+    const result = await response.json();
+    return { found: result.exists };
+  } catch (error) {
+    return { found: false };
   }
 }
 
