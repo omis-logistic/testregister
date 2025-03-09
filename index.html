@@ -12,9 +12,9 @@
     <form id="declarationForm">
       <div class="form-group">
         <label for="trackingNumber">Tracking Number:</label>
-        <input type="text" id="trackingNumber" name="trackingNumber" 
-               pattern="^[A-Za-z0-9-]+$" 
-              title="Only letters, numbers, and hyphens allowed"> 
+        <input type="text" id="trackingNumber" 
+       pattern="^[A-Za-z0-9\-]+$"
+       title="Only letters, numbers, and hyphens allowed">
               
       </div>
 
@@ -128,7 +128,7 @@
  
   <script>
     const CONFIG = {
-      GAS_URL: 'https://script.google.com/macros/s/AKfycbw9Gd3oR9HP8B0Qim7qiFi3BbzZAoK9oTLluXsDVW1DWJYx32uIR_xKW7VtSYhPOIvBWg/exec'
+      GAS_URL: 'https://script.google.com/macros/s/AKfycbyC9O1xtH1DBt3sN3NvZF6c2ptDDt3_2FLz5WVIXVXq9DhNAbyRxuesuj64byqgYTVr/exec'
     };
 
     // Complete file validation function
