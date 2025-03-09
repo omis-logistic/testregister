@@ -113,11 +113,16 @@
 
       <div class="form-group">
         <label for="fileUpload">Upload Files (Max 3, Required for * Categories):</label>
-        <input type="file" id="fileUpload" name="files" 
-               multiple accept="image/*, .pdf" 
-               onchange="validateFiles(this)">
+        <input 
+          type="file" 
+          id="fileUpload" 
+          name="files" 
+          multiple 
+          accept="image/*, .pdf" 
+          onchange="validateFileSelection(this)" <!-- Updated attribute -->
+          >
         <small>Allowed formats: JPEG, PNG, PDF</small>
-      </div>
+        </div>
 
       <div class="button-group">
         <button type="submit" class="gold-button">Submit Declaration</button>
