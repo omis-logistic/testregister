@@ -30,6 +30,17 @@ async function handleFormSubmit(e) {
 
   try {
     const formData = new FormData(form);
+    
+    // Validate inputs
+    validateTrackingNumber(formData.get('trackingNumber'));
+    validatePhoneNumber(formData.get('phone'));
+    validateQuantity(formData.get('quantity'));
+    validatePrice(formData.get('price'));
+    validateFiles(
+      formData.get('itemCategory'),
+      formData.getAll('files')
+    );
+
     const payload = {
       trackingNumber: formData.get('trackingNumber'),
       phone: formData.get('phone'),
@@ -41,9 +52,7 @@ async function handleFormSubmit(e) {
       files: await processFiles(formData.getAll('files'))
     };
 
-    // Temporary validation bypass for testing
-    console.log('Payload:', payload);
-    
+    console.log('Validated Payload:', payload);
     submitViaJsonp(payload);
   } catch (error) {
     showMessage(`Error: ${error.message}`, 'error');
@@ -51,7 +60,16 @@ async function handleFormSubmit(e) {
   }
 }
 
-// Validation functions
+function validateTrackingNumber(value) {
+  if (!/^[A-Za-z0-9\-]+$/.test(value)) {
+    throw new Error('Tracking number contains invalid characters');
+  }
+  
+  if (value.startsWith('-') || value.endsWith('-')) {
+    throw new Error('Tracking number cannot start/end with hyphen');
+  }
+}
+
 function validatePhoneNumber(phone) {
   if (!/^\d{6,15}$/.test(phone)) {
     throw new Error('Phone number must contain 6-15 digits');
@@ -77,21 +95,32 @@ function validateFiles(category, files) {
     '*Books', '*Cosmetics/Skincare/Bodycare', '*Food Beverage/Drinks',
     '*Gadgets', '*Oil Ointment', '*Supplement'
   ];
-
+  
   if (starredCategories.includes(category)) {
     if (files.length < 1) throw new Error('At least 1 file required');
     if (files.length > 3) throw new Error('Maximum 3 files allowed');
   }
+  
+  files.forEach(file => {
+    if (file.size > 5 * 1024 * 1024) {
+      throw new Error(`File ${file.name} exceeds 5MB limit`);
+    }
+  });
 }
 
 // File processing
 async function processFiles(files) {
-  return Promise.all(files.map(async file => ({
-    name: file.name,
-    type: file.type,
-    data: await toBase64(file),
-    size: file.size
-  }))); // Added closing parenthesis
+  return Promise.all(files.map(async file => {
+    if (!file.type) {
+      throw new Error(`File ${file.name} has no type detected`);
+    }
+    return {
+      name: file.name,
+      type: file.type,  // Ensure this matches backend check
+      data: await toBase64(file),
+      size: file.size
+    };
+  }));
 }
 
 function toBase64(file) {
