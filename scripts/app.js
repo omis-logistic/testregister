@@ -208,6 +208,21 @@ function submitViaJsonp(payload) {
     cleanupJsonp(script, callbackName);
   };
 
+  script.onerror = () => {
+    showMessage('Connection failed', 'error');
+    document.body.removeChild(script);
+  };
+  
+  const params = new URLSearchParams({
+    ...payload,
+    files: JSON.stringify(payload.files),
+    callback: callbackName
+  });
+
+  script.src = `${CONFIG.GAS_URL}?${params}`;
+  document.body.appendChild(script);
+}
+  
 function handleGasResponse(response) {
   if (response?.success) {
     showMessage(response.message, 'success');
