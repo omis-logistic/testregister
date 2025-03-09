@@ -12,9 +12,10 @@
     <form id="declarationForm">
       <div class="form-group">
         <label for="trackingNumber">Tracking Number:</label>
-        <input type="text" id="trackingNumber" 
-       pattern="^[A-Za-z0-9\-]+$"
-       title="Only letters, numbers, and hyphens allowed">
+        <input type="text" id="trackingNumber" name="trackingNumber" 
+       pattern="^[A-Za-z0-9\-]+"
+       title="Only letters, numbers, and hyphens allowed (no spaces)"
+       required> <!-- Added required attribute -->
               
       </div>
 
