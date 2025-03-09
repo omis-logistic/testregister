@@ -205,42 +205,44 @@ function validatePhoneNumber(phone) {
 }
 
 async function submitForm(payload) {
-  // Directly call Google Apps Script with CORS workaround
-  const PROXY_URL = 'https://script.google.com/macros/s/AKfycbwFP2PVzu0z_JHwTxAKxRHLiWVUCyPwd8jpGWh-hwTtbyMO2bV7cntuS5DPSTgfP3Lg6A/exec';
+  const PROXY_URL = 'https://script.google.com/macros/s/AKfycby3dq0100KQ2nCIj5WdAsp1pYm66V6FItzfD1l1_8rcgXhfU3EpxCkU3Vo3V9GM36m9Rw/exec';
   
   try {
-    const form = document.createElement('form');
-    form.style.display = 'none';
-    form.method = 'POST';
-    form.action = PROXY_URL;
+    // Create URL-encoded payload
+    const formData = new URLSearchParams();
+    formData.append('payload', JSON.stringify(payload));
+
+    const response = await fetch(PROXY_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+      },
+      body: formData,
+      mode: 'no-cors' // Bypass CORS preflight
+    });
+
+    // Handle opaque response
+    if (!response.ok) throw new Error('Network error');
     
-    const input = document.createElement('input');
-    input.name = 'payload';
-    input.value = JSON.stringify(payload);
-    
-    form.appendChild(input);
-    document.body.appendChild(form);
-    form.submit();
-    
-    // Check result after submission
-    const checkResult = async () => {
-      const response = await fetch(PROXY_URL + '?check=' + Date.now());
-      const result = await response.json();
-      
-      if (result.success) {
-        showMessage('Submission successful!', 'success');
-        document.getElementById('declarationForm').reset();
-      } else {
-        throw new Error(result.error || 'Submission failed');
-      }
-    };
-    
-    setTimeout(checkResult, 3000);
-    
+    // For no-cors mode, we can't read response body directly
+    // Add success tracking in spreadsheet
+    setTimeout(() => checkSubmissionStatus(payload.trackingNumber), 2000);
+    showMessage('Submission processing...', 'pending');
+
   } catch (error) {
-    showMessage(`Error: ${error.message}`, 'error');
-    console.error('Submission Error:', error);
+    showMessage(`Submission failed: ${error.message}`, 'error');
   }
+}
+
+// Add this verification function
+async function checkSubmissionStatus(trackingNumber) {
+  const ss = SpreadsheetApp.openById("1XGlYw_0Zn7MZAMVTBA-DHCvXVsdeSKYAh6KvzM3aEco");
+  const sheet = ss.getSheetByName("V2");
+  const data = sheet.getDataRange().getValues();
+  
+  const exists = data.some(row => row[2] === trackingNumber);
+  exists ? showMessage('Submission verified!', 'success') 
+         : showMessage('Verification failed', 'error');
 }
 
 function showMessage(text, type) {
