@@ -204,39 +204,44 @@ function validatePhoneNumber(phone) {
   }
 }
 
+const PROXY_URL = 'https://script.google.com/macros/s/AKfycbzCsjxgx24aoNJyUaZF30yGWTUOy6Q1P-agvMDrUWJLVtTHc5CCGajLJt2sV5B-9pEiAA/exec';
+
 async function submitForm(payload) {
-  const PROXY_URL = 'https://script.google.com/macros/s/AKfycbzsdmgXy5JVsJtTvPwQppL8BMitkUk_yGLq-BXEDpzcMd-B47cUNUZjnBrRHs5tOyrQLA/exec';
+  showMessage('Submitting...', 'pending');
   
   try {
-    const formData = new FormData();
-    formData.append('payload', JSON.stringify(payload));
-
-    showMessage('Submitting...', 'pending');
-
-    // Submit with error handling
-    const response = await fetch(PROXY_URL, {
+    // 1. Submit main data
+    const submitResponse = await fetch(PROXY_URL, {
       method: 'POST',
-      body: formData
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
     });
-
-    if (!response.ok) throw new Error('Submission failed');
     
-    // Verify submission after short delay
-    setTimeout(async () => {
-      const verification = await verifySubmission(payload.trackingNumber);
-      verification.found ?
-        showMessage('Submission successful!', 'success') :
-        showMessage('Verification failed', 'error');
-    }, 3000);
-
+    if (!submitResponse.ok) throw new Error('Submission failed');
+    
+    // 2. Verify with retries
+    let attempts = 0;
+    const checkExists = async () => {
+      attempts++;
+      const response = await fetch(`${PROXY_URL}?tracking=${encodeURIComponent(payload.trackingNumber)}`);
+      const result = await response.json();
+      
+      if (result.exists) {
+        showMessage('Submission successful! ✔️', 'success');
+        document.getElementById('declarationForm').reset();
+      } else if (attempts < 5) {
+        setTimeout(checkExists, 2000); // Retry every 2 seconds
+        showMessage(`Verifying... (${attempts}/5)`, 'pending');
+      } else {
+        throw new Error('Verification timeout');
+      }
+    };
+    
+    await checkExists();
+    
   } catch (error) {
-    showMessage('Finalizing submission...', 'pending');
-    setTimeout(async () => {
-      const verification = await verifySubmission(payload.trackingNumber);
-      verification.found ?
-        showMessage('Submission completed!', 'success') :
-        showMessage('Submission may not have completed', 'error');
-    }, 5000);
+    showMessage('Final verification failed - check spreadsheet manually', 'error');
+    console.error('Submission Error:', error);
   }
 }
 
