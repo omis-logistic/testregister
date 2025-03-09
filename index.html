@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Parcel Declaration</title>
-  <link rel="stylesheet" href="styles/main.css">
+  <link rel="stylesheet" href="./styles/main.css">
 </head>
 <body>
   <div class="container">
@@ -130,14 +130,35 @@
     const CONFIG = {
       GAS_URL: 'https://script.google.com/macros/s/AKfycbzLo_5Aw_zs8N-qQ-mBXfLiRzC6Lm7LDcDexRAVQ42YQMuq8fQ2H25nWA1lrScfvLXmRQ/exec'
     };
+
+    // Complete file validation function
     function validateFiles(input) {
       const maxFiles = 3;
+      const starredCategories = [
+        '*Books', '*Cosmetics/Skincare/Bodycare', '*Food Beverage/Drinks',
+        '*Gadgets', '*Oil Ointment', '*Supplement'
+      ];
+      
+      // Get selected category
+      const category = document.getElementById('itemCategory').value;
+
+      // Validate file count
       if (input.files.length > maxFiles) {
         alert(`Maximum ${maxFiles} files allowed`);
         input.value = '';
+        return;
+      }
+
+      // Validate mandatory files for starred categories
+      if (starredCategories.includes(category)) {
+        if (input.files.length < 1) {
+          alert(`At least 1 file required for ${category}`);
+          input.value = '';
+        }
       }
     }
   </script>
-  <script src="scripts/app.js"></script>
+
+  <script src="./scripts/app.js"></script>
 </body>
 </html>
