@@ -230,7 +230,7 @@ async function submitForm(payload) {
     showMessage('Submission processing...', 'pending');
 
   } catch (error) {
-    showMessage(`Submission failed: ${error.message}`, 'error');
+    showMessage(`Submission: ${error.message}`, 'error');
   }
 }
 
