@@ -25,32 +25,29 @@ function checkConfig() {
 
 async function handleFormSubmit(e) {
   e.preventDefault();
-  console.log('Form submission started');
-  
   const form = e.target;
-  const formData = new FormData(form);
-  const payload = {};
-  
+  showMessage('Submitting...', 'pending');
+
   try {
-    // Convert FormData to object
-    for (const [key, value] of formData.entries()) {
-      payload[key] = value;
-    }
+    const formData = new FormData(form);
+    const payload = {
+      trackingNumber: formData.get('trackingNumber'),
+      phone: formData.get('phone'),
+      itemDescription: formData.get('itemDescription'),
+      quantity: formData.get('quantity'),
+      price: formData.get('price'),
+      collectionPoint: formData.get('collectionPoint'),
+      itemCategory: formData.get('itemCategory'),
+      files: await processFiles(formData.getAll('files'))
+    };
 
-    // Client-side validations
-    validatePhoneNumber(payload.phone);
-    validateQuantity(payload.quantity);
-    validatePrice(payload.price);
-    validateFiles(payload.itemCategory, formData.getAll('files'));
-
-    // Process files
-    payload.files = await processFiles(formData.getAll('files'));
-
-    // Submit via JSONP
+    // Temporary validation bypass for testing
+    console.log('Payload:', payload);
+    
     submitViaJsonp(payload);
-
   } catch (error) {
-    handleSubmissionError(error);
+    showMessage(`Error: ${error.message}`, 'error');
+    console.error('Submission Error:', error);
   }
 }
 
@@ -108,12 +105,19 @@ function toBase64(file) {
 
 // JSONP submission
 function submitViaJsonp(payload) {
-  const callbackName = `gasCallback_${Date.now()}`;
+  const callbackName = `gas_${Date.now()}`;
   const script = document.createElement('script');
   
   window[callbackName] = (response) => {
-    cleanupJsonp(script, callbackName);
-    handleGasResponse(response);
+    document.body.removeChild(script);
+    delete window[callbackName];
+    
+    if (response.success) {
+      showMessage(response.message, 'success');
+      document.getElementById('declarationForm').reset();
+    } else {
+      showMessage(response.error || 'Submission failed', 'error');
+    }
   };
 
   const params = new URLSearchParams({
@@ -123,6 +127,11 @@ function submitViaJsonp(payload) {
   });
 
   script.src = `${CONFIG.GAS_URL}?${params}`;
+  script.onerror = () => {
+    showMessage('Connection failed', 'error');
+    document.body.removeChild(script);
+  };
+  
   document.body.appendChild(script);
 }
 
