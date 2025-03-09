@@ -8,13 +8,13 @@ document.getElementById('declarationForm').addEventListener('submit', async (e) 
   try {
     // Client-side validations
     const trackingNumber = formData.get('trackingNumber');
-    if (!/^[a-zA-Z0-9-]+$/.test(trackingNumber)) {
-      throw new Error('Invalid tracking number format. Only letters, numbers, and hyphens allowed.');
+    if (!/^[A-Za-z0-9-]+$/.test(trackingNumber)) {
+    throw new Error('Tracking number can only contain letters, numbers, and hyphens');
     }
 
     const phone = formData.get('phone');
     if (!/^\d{6,}$/.test(phone)) {
-      throw new Error('Phone number must contain at least 6 digits');
+    throw new Error('Phone number must contain only numbers (6+ digits)');
     }
 
     const quantity = formData.get('quantity');
