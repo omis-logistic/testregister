@@ -9,14 +9,22 @@ document.getElementById('declarationForm').addEventListener('submit', async (e) 
     // Client-side validations
     const trackingNumber = formData.get('trackingNumber');
     if (!/^[A-Za-z0-9-]+$/.test(trackingNumber)) {
-    throw new Error('Tracking number can only contain letters, numbers, and hyphens');
+      throw new Error('Tracking number can only contain letters, numbers, and hyphens');
     }
 
+    if (/^-|-$/.test(trackingNumber)) {
+      throw new Error('Tracking number cannot start or end with hyphen');
+    }
+    
     const phone = formData.get('phone');
     if (!/^\d{6,}$/.test(phone)) {
-    throw new Error('Phone number must contain only numbers (6+ digits)');
+      throw new Error('Phone number must contain only numbers (6+ digits)');
     }
 
+    if (phone.length > 15) {
+      throw new Error('Phone number too long (max 15 digits)');
+    }
+    
     const quantity = formData.get('quantity');
     if (!Number.isInteger(Number(quantity)) || quantity < 1) {
       throw new Error('Quantity must be a whole number greater than 0');
