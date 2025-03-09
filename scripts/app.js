@@ -31,38 +31,34 @@ async function handleFormSubmit(e) {
   try {
     const formData = new FormData(form);
     
-    // Get and validate tracking number first
-    const trackingNumber = formData.get('trackingNumber') || '';
+    // Get and validate tracking number
+    const trackingNumber = formData.get('trackingNumber')?.trim() || '';
     validateTrackingNumber(trackingNumber);
 
-    // Get and validate phone number
-    const phone = formData.get('phone') || '';
-    validatePhoneNumber(phone);
-
-    // Validate quantity
+    // Get and validate other fields
+    const phone = formData.get('phone')?.trim() || '';
     const quantity = formData.get('quantity') || '';
-    validateQuantity(quantity);
-
-    // Validate price
     const price = formData.get('price') || '';
-    validatePrice(price);
-
-    // Validate files
     const itemCategory = formData.get('itemCategory') || '';
-    const files = formData.getAll('files');
+    const files = Array.from(formData.getAll('files'));
+
+    // Validate inputs
+    validatePhoneNumber(phone);
+    validateQuantity(quantity);
+    validatePrice(price);
     validateFiles(itemCategory, files);
 
     // Process files and build payload
     const processedFiles = await processFiles(files);
     
     const payload = {
-      trackingNumber: trackingNumber.trim(),
-      phone: phone.trim(),
-      itemDescription: (formData.get('itemDescription') || '').trim(),
-      quantity: quantity,
-      price: price,
+      trackingNumber,
+      phone,
+      itemDescription: formData.get('itemDescription')?.trim() || '',
+      quantity: Number(quantity),
+      price: Number(price),
       collectionPoint: formData.get('collectionPoint'),
-      itemCategory: itemCategory,
+      itemCategory,
       files: processedFiles
     };
 
@@ -70,22 +66,17 @@ async function handleFormSubmit(e) {
     submitViaJsonp(payload);
 
   } catch (error) {
-    showMessage(`Error: ${error.message}`, 'error');
-    console.error('Submission Error:', error);
-    // Optional: Log to analytics service
-    // logErrorToService(error);
+    handleSubmissionError(error);
   }
 }
 
+// Validation functions
 function validateTrackingNumber(value) {
-  // Add null/empty check
   if (!value || typeof value !== 'string') {
     throw new Error('Tracking number is required');
   }
 
-  // Trim whitespace
   const trimmedValue = value.trim();
-  
   if (trimmedValue.length === 0) {
     throw new Error('Tracking number cannot be empty');
   }
@@ -119,37 +110,17 @@ function validatePrice(price) {
   }
 }
 
-function validateFileSelection(input) {
-  try {
-    const files = Array.from(input.files);
-    const category = document.getElementById('itemCategory').value;
-    
-    // Basic validation
-    validateFileCount(category, files);
-    validateFileSizes(files);
-    
-    // Show success feedback
-    showMessage(`${files.length} valid files selected`, 'success');
-    
-  } catch (error) {
-    showMessage(error.message, 'error');
-    input.value = ''; // Clear invalid files
-  }
-}
-
-function validateFileCount(category, files) {
+function validateFiles(category, files) {
   const starredCategories = [
     '*Books', '*Cosmetics/Skincare/Bodycare', '*Food Beverage/Drinks',
     '*Gadgets', '*Oil Ointment', '*Supplement'
   ];
-  
+
   if (starredCategories.includes(category)) {
     if (files.length < 1) throw new Error('At least 1 file required');
     if (files.length > 3) throw new Error('Maximum 3 files allowed');
   }
-}
 
-function validateFileSizes(files) {
   files.forEach(file => {
     if (file.size > 5 * 1024 * 1024) {
       throw new Error(`File ${file.name} exceeds 5MB limit`);
@@ -157,28 +128,13 @@ function validateFileSizes(files) {
   });
 }
 
-// Update processFiles function
-async function processFiles(files) {
-  return Promise.all(Array.from(files).map(async file => ({
-    name: file.name,
-    mimeType: file.type,  // Changed from 'type' to 'mimeType'
-    data: await toBase64(file),
-    size: file.size
-  })));
-}
-
 // File processing
 async function processFiles(files) {
-  return Promise.all(files.map(async file => {
-    if (!file.type) {
-      throw new Error(`File ${file.name} has no type detected`);
-    }
-    return {
-      name: file.name,
-      type: file.type,  // Ensure this matches backend check
-      data: await toBase64(file),
-      size: file.size
-    };
+  return Promise.all(files.map(async file => ({
+    name: file.name,
+    mimeType: file.type,
+    data: await toBase64(file),
+    size: file.size
   }));
 }
 
@@ -198,30 +154,25 @@ function submitViaJsonp(payload) {
   
   window[callbackName] = (response) => {
     cleanupJsonp(script, callbackName);
-    if (response && response.success) {
-      handleSuccess(response);
-    } else {
-      handleFailure(response);
-    }
+    response?.success ? handleSuccess(response) : handleFailure(response);
   };
 
-  // Add retry mechanism
   script.onerror = () => {
     showMessage('Connection failed - retrying...', 'error');
     setTimeout(() => submitViaJsonp(payload), 2000);
   };
   
-  // Encode parameters properly
   const params = new URLSearchParams({
     ...payload,
     files: JSON.stringify(payload.files),
     callback: callbackName
-  }).toString().replace(/%2F/g, '/');
+  }).toString();
 
   script.src = `${CONFIG.GAS_URL}?${params}`;
   document.body.appendChild(script);
 }
 
+// Response handlers
 function handleSuccess(response) {
   showMessage(response.message, 'success');
   console.log('Submission successful:', response);
@@ -232,16 +183,6 @@ function handleFailure(response) {
   const errorMessage = response?.error || 'Unknown server error';
   showMessage(`Submission failed: ${errorMessage}`, 'error');
   console.error('Submission failed:', response);
-}
-
-function handleGasResponse(response) {
-  console.log('GAS Response:', response);
-  if (response.success) {
-    showMessage(response.message, 'success');
-    document.getElementById('declarationForm').reset();
-  } else {
-    throw new Error(response.error || 'Server error');
-  }
 }
 
 function cleanupJsonp(script, callbackName) {
@@ -280,8 +221,8 @@ window.debugForm = {
       trackingNumber: 'TEST-123',
       phone: '1234567890',
       itemDescription: 'Test Item',
-      quantity: '2',
-      price: '19.99',
+      quantity: 2,
+      price: 19.99,
       collectionPoint: 'Rimba',
       itemCategory: 'Clothing',
       files: []
