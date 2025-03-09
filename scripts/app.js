@@ -193,61 +193,83 @@ function toBase64(file) {
 function submitViaJsonp(payload) {
   const callbackName = `gas_${Date.now()}`;
   const script = document.createElement('script');
-  
-  // Temporary payload compression
-  const compressedPayload = {
-    ...payload,
-    files: payload.files.map(file => ({
-      ...file,
-      data: file.data.slice(0, 100) // Truncate to first 100 characters
-    }))
+  const MAX_RETRIES = 3;
+  let retryCount = 0;
+
+  // Encode payload components
+  const encodePayload = () => {
+    try {
+      return {
+        ...payload,
+        files: encodeURIComponent(JSON.stringify(payload.files)),
+        callback: callbackName
+      };
+    } catch (e) {
+      showMessage('Failed to prepare submission data', 'error');
+      throw new Error('Payload encoding failed');
+    }
   };
 
-  // Set up JSONP callback
+  // Handle server response
   window[callbackName] = (response) => {
     cleanupJsonp(script, callbackName);
-    if (response?.success) {
-      showMessage(response.message, 'success');
-      document.getElementById('declarationForm').reset();
+    
+    try {
+      if (!response) {
+        throw new Error('Empty server response');
+      }
+      
+      if (response.success) {
+        showMessage(response.message, 'success');
+        document.getElementById('declarationForm').reset();
+      } else {
+        const cleanError = response.error.replace(/[^\w\s:.,-]/g, '');
+        throw new Error(cleanError || 'Unknown server error');
+      }
+    } catch (error) {
+      showMessage(`Submission failed: ${error.message}`, 'error');
+      console.error('Response handling error:', error);
+    }
+  };
+
+  // Handle network errors
+  const handleError = () => {
+    if (retryCount < MAX_RETRIES) {
+      retryCount++;
+      showMessage(`Connection issue - retry ${retryCount}/${MAX_RETRIES}`, 'error');
+      setTimeout(submitRequest, 2000);
     } else {
-      const errorMsg = response?.error || 'Unknown server error';
-      showMessage(`Submission failed: ${errorMsg}`, 'error');
-    }
-  };
-
-  // Configure error handling
-  script.onerror = () => {
-    showMessage('Connection failed - retrying...', 'error');
-    cleanupJsonp(script, callbackName);
-    setTimeout(() => submitViaJsonp(payload), 2000);
-  };
-
-  // Build URL parameters
-  const params = new URLSearchParams({
-    ...compressedPayload,
-    files: JSON.stringify(compressedPayload.files),
-    callback: callbackName
-  }).toString()
-    .replace(/%2F/g, '/')
-    .replace(/%3D/g, '=');
-
-  // Encode special characters
-  const encodedParams = encodeURI(params)
-    .replace(/'/g, "%27")
-    .replace(/"/g, "%22");
-
-  // Execute JSONP request
-  script.src = `${CONFIG.GAS_URL}?${encodedParams}`;
-  console.log('JSONP Request:', script.src);
-  document.body.appendChild(script);
-
-  // Timeout cleanup
-  setTimeout(() => {
-    if (window[callbackName]) {
+      showMessage('Connection failed after multiple attempts', 'error');
       cleanupJsonp(script, callbackName);
-      showMessage('Request timed out', 'error');
     }
-  }, 15000);
+  };
+
+  // Create and send request
+  const submitRequest = () => {
+    try {
+      const encodedPayload = encodePayload();
+      const params = new URLSearchParams(encodedPayload);
+      
+      // Validate URL length
+      const fullUrl = `${CONFIG.GAS_URL}?${params}`;
+      if (fullUrl.length > 1500) {
+        showMessage('Data too large - reduce file sizes', 'error');
+        throw new Error(`URL length exceeded: ${fullUrl.length} characters`);
+      }
+
+      script.src = fullUrl;
+      script.onerror = handleError;
+      document.body.appendChild(script);
+
+    } catch (error) {
+      showMessage(`Submission error: ${error.message}`, 'error');
+      console.error('Request creation failed:', error);
+      cleanupJsonp(script, callbackName);
+    }
+  };
+
+  // Initial submission attempt
+  submitRequest();
 }
   
 function handleGasResponse(response) {
