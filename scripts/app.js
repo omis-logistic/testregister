@@ -176,7 +176,7 @@ async function processFiles(files) {
     mimeType: file.type,
     data: await toBase64(file),
     size: file.size
-  }));
+  })));
 }
 
 function toBase64(file) {
