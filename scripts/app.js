@@ -1,123 +1,183 @@
 // scripts/app.js
-document.getElementById('declarationForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const form = e.target;
-  const formData = new FormData(form);
-  const messageDiv = document.getElementById('message');
-  
-  try {
-    // Client-side validations
-    const trackingNumber = formData.get('trackingNumber');
-    //if (!/^[A-Za-z0-9-]+$/.test(trackingNumber)) {
-    //  throw new Error('Tracking number can only contain letters, numbers, and hyphens');
-   // }
-
-    if (/^-|-$/.test(trackingNumber)) {
-      throw new Error('Tracking number cannot start or end with hyphen');
-    }
-    
-    const phone = formData.get('phone');
-    if (!/^\d{6,}$/.test(phone)) {
-      throw new Error('Phone number must contain only numbers (6+ digits)');
-    }
-
-    if (phone.length > 15) {
-      throw new Error('Phone number too long (max 15 digits)');
-    }
-    
-    const quantity = formData.get('quantity');
-    if (!Number.isInteger(Number(quantity)) || quantity < 1) {
-      throw new Error('Quantity must be a whole number greater than 0');
-    }
-
-    const itemCategory = formData.get('itemCategory');
-    const starredCategories = [
-      '*Books', '*Cosmetics/Skincare/Bodycare', '*Food Beverage/Drinks',
-      '*Gadgets', '*Oil Ointment', '*Supplement'
-    ];
-    
-    // File validation
-    const files = formData.getAll('files');
-    if (starredCategories.includes(itemCategory)) {
-      if (files.length === 0) {
-        throw new Error('At least 1 file required for this category');
-      }
-    }
-
-    // Process files
-    const processedFiles = [];
-    for (const file of files) {
-      processedFiles.push({
-        name: file.name,
-        mimeType: file.type,
-        data: await toBase64(file)
-      });
-    }
-
-    // Create payload
-    const payload = {
-      trackingNumber: trackingNumber,
-      phone: phone,
-      itemDescription: formData.get('itemDescription'),
-      quantity: Number(quantity),
-      price: Number(formData.get('price')),
-      collectionPoint: formData.get('collectionPoint'),
-      itemCategory: itemCategory,
-      files: processedFiles
-    };
-
-    // Submit to GAS
-    const response = await fetch(CONFIG.GAS_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload)
-    });
-
-    if (!response.ok) throw new Error('Network response was not ok');
-
-    const result = await response.json();
-    
-    if (result.success) {
-      showMessage(result.message, 'success');
-      form.reset();
-    } else {
-      throw new Error(result.error || 'Submission failed');
-    }
-
-  } catch (error) {
-    showMessage(error.message, 'error');
-    console.error('Submission error:', error);
-  }
+document.addEventListener('DOMContentLoaded', () => {
+  console.log('Document ready - initializing form');
+  initializeForm();
+  checkConfig();
 });
 
-// File to Base64 converter
+function initializeForm() {
+  const form = document.getElementById('declarationForm');
+  if (!form) {
+    console.error('Error: Form element not found');
+    return;
+  }
+
+  form.addEventListener('submit', handleFormSubmit);
+  console.log('Form event listener attached');
+}
+
+function checkConfig() {
+  if (typeof CONFIG === 'undefined' || !CONFIG.GAS_URL) {
+    showMessage('Configuration error: GAS endpoint not defined', 'error');
+    console.error('Missing CONFIG:', CONFIG);
+  }
+}
+
+async function handleFormSubmit(e) {
+  e.preventDefault();
+  console.log('Form submission started');
+  
+  const form = e.target;
+  const formData = new FormData(form);
+  const payload = {};
+  
+  try {
+    // Convert FormData to object
+    for (const [key, value] of formData.entries()) {
+      payload[key] = value;
+    }
+
+    // Client-side validations
+    validatePhoneNumber(payload.phone);
+    validateQuantity(payload.quantity);
+    validatePrice(payload.price);
+    validateFiles(payload.itemCategory, formData.getAll('files'));
+
+    // Process files
+    payload.files = await processFiles(formData.getAll('files'));
+
+    // Submit via JSONP
+    submitViaJsonp(payload);
+
+  } catch (error) {
+    handleSubmissionError(error);
+  }
+}
+
+// Validation functions
+function validatePhoneNumber(phone) {
+  if (!/^\d{6,15}$/.test(phone)) {
+    throw new Error('Phone number must contain 6-15 digits');
+  }
+}
+
+function validateQuantity(quantity) {
+  const num = Number(quantity);
+  if (!Number.isInteger(num) || num < 1) {
+    throw new Error('Quantity must be a whole number ≥ 1');
+  }
+}
+
+function validatePrice(price) {
+  const num = Number(price);
+  if (isNaN(num) || num < 0) {
+    throw new Error('Price must be a positive number');
+  }
+}
+
+function validateFiles(category, files) {
+  const starredCategories = [
+    '*Books', '*Cosmetics/Skincare/Bodycare', '*Food Beverage/Drinks',
+    '*Gadgets', '*Oil Ointment', '*Supplement'
+  ];
+
+  if (starredCategories.includes(category)) {
+    if (files.length < 1) throw new Error('At least 1 file required');
+    if (files.length > 3) throw new Error('Maximum 3 files allowed');
+  }
+}
+
+// File processing
+async function processFiles(files) {
+  return Promise.all(files.map(async file => ({
+    name: file.name,
+    type: file.type,
+    data: await toBase64(file),
+    size: file.size
+  }));
+}
+
 function toBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.readAsDataURL(file);
     reader.onload = () => resolve(reader.result.split(',')[1]);
     reader.onerror = error => reject(error);
+    reader.readAsDataURL(file);
   });
 }
 
-// Message display handler
-function showMessage(text, type) {
-  const messageDiv = document.getElementById('message');
-  messageDiv.textContent = text;
-  messageDiv.className = type;
+// JSONP submission
+function submitViaJsonp(payload) {
+  const callbackName = `gasCallback_${Date.now()}`;
+  const script = document.createElement('script');
   
-  // Clear message after 5 seconds
-  setTimeout(() => {
-    messageDiv.textContent = '';
-    messageDiv.className = '';
-  }, 5000);
+  window[callbackName] = (response) => {
+    cleanupJsonp(script, callbackName);
+    handleGasResponse(response);
+  };
+
+  const params = new URLSearchParams({
+    ...payload,
+    files: JSON.stringify(payload.files),
+    callback: callbackName
+  });
+
+  script.src = `${CONFIG.GAS_URL}?${params}`;
+  document.body.appendChild(script);
 }
 
-// Initial loading check
-document.addEventListener('DOMContentLoaded', () => {
-  if (typeof CONFIG === 'undefined') {
-    showMessage('Configuration error: GAS_URL not defined', 'error');
+function handleGasResponse(response) {
+  console.log('GAS Response:', response);
+  if (response.success) {
+    showMessage(response.message, 'success');
+    document.getElementById('declarationForm').reset();
+  } else {
+    throw new Error(response.error || 'Server error');
   }
-});
+}
+
+function cleanupJsonp(script, callbackName) {
+  document.body.removeChild(script);
+  delete window[callbackName];
+}
+
+// Error handling
+function handleSubmissionError(error) {
+  console.error('Submission Error:', error);
+  showMessage(`Error: ${error.message}`, 'error');
+}
+
+// UI functions
+function showMessage(text, type) {
+  const messageDiv = document.getElementById('message');
+  if (!messageDiv) {
+    console.error('Message container not found');
+    return;
+  }
+
+  messageDiv.textContent = text;
+  messageDiv.className = `message ${type}`;
+
+  clearTimeout(messageDiv.timeout);
+  messageDiv.timeout = setTimeout(() => {
+    messageDiv.textContent = '';
+    messageDiv.className = 'message';
+  }, type === 'error' ? 8000 : 5000);
+}
+
+// Debug utilities
+window.debugForm = {
+  testSubmission: () => {
+    const testPayload = {
+      trackingNumber: 'TEST-123',
+      phone: '1234567890',
+      itemDescription: 'Test Item',
+      quantity: '2',
+      price: '19.99',
+      collectionPoint: 'Rimba',
+      itemCategory: 'Clothing',
+      files: []
+    };
+    submitViaJsonp(testPayload);
+  }
+};
