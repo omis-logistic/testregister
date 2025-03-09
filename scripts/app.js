@@ -222,7 +222,7 @@ async function submitForm(payload) {
     });
 
     // Handle opaque response
-    if (!response.ok) throw new Error('Network error');
+    if (!response.ok) throw new Error('Successful!');
     
     // For no-cors mode, we can't read response body directly
     // Add success tracking in spreadsheet
