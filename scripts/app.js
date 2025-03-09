@@ -205,7 +205,7 @@ function validatePhoneNumber(phone) {
 }
 
 async function submitForm(payload) {
-  const PROXY_URL = 'https://script.google.com/macros/s/AKfycbzaiuQXoyx4sGQeJtNDdT0UOnVzpS8TDLxtVoBa_51fC1Dw739lbm4hyioWnm7-YzsinQ/exec';
+  const PROXY_URL = 'https://script.google.com/macros/s/AKfycbwEj5lxeD0rUHbowriWHOOHs4rQIs8jW_rQ6dL5Bpk5WzOoDU0QAVHGGn0RnCACC63iGA/exec';
   
   try {
     // Create URL-encoded payload
