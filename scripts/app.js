@@ -193,83 +193,135 @@ function toBase64(file) {
 function submitViaJsonp(payload) {
   const callbackName = `gas_${Date.now()}`;
   const script = document.createElement('script');
-  const MAX_RETRIES = 3;
-  let retryCount = 0;
+  let isScriptActive = true;
+  const MAX_URL_LENGTH = 2000; // Conservative browser limit
+  const MAX_FILE_SIZE = 3 * 1024 * 1024; // 3MB per file
 
-  // Encode payload components
-  const encodePayload = () => {
+  // 1. Payload validation and cleanup system
+  const safeCleanup = () => {
     try {
-      return {
-        ...payload,
-        files: encodeURIComponent(JSON.stringify(payload.files)),
-        callback: callbackName
-      };
-    } catch (e) {
-      showMessage('Failed to prepare submission data', 'error');
-      throw new Error('Payload encoding failed');
+      if (isScriptActive && script.parentNode === document.body) {
+        document.body.removeChild(script);
+      }
+      isScriptActive = false;
+      delete window[callbackName];
+    } catch (cleanupError) {
+      console.warn('Cleanup error:', cleanupError);
     }
   };
 
-  // Handle server response
+  // 2. Response handler with error shielding
   window[callbackName] = (response) => {
-    cleanupJsonp(script, callbackName);
-    
     try {
-      if (!response) {
-        throw new Error('Empty server response');
-      }
+      safeCleanup();
       
+      if (!response) {
+        throw new Error('Server response empty');
+      }
+
       if (response.success) {
         showMessage(response.message, 'success');
         document.getElementById('declarationForm').reset();
       } else {
-        const cleanError = response.error.replace(/[^\w\s:.,-]/g, '');
-        throw new Error(cleanError || 'Unknown server error');
+        const cleanError = (response.error || 'Unknown error')
+          .replace(/[^a-zA-Z0-9 .,:-]/g, '')
+          .substring(0, 100);
+        showMessage(`Failed: ${cleanError}`, 'error');
       }
-    } catch (error) {
-      showMessage(`Submission failed: ${error.message}`, 'error');
-      console.error('Response handling error:', error);
+    } catch (handlerError) {
+      console.error('Response handling failed:', handlerError);
+      showMessage('Submission processing error', 'error');
     }
   };
 
-  // Handle network errors
-  const handleError = () => {
-    if (retryCount < MAX_RETRIES) {
-      retryCount++;
-      showMessage(`Connection issue - retry ${retryCount}/${MAX_RETRIES}`, 'error');
-      setTimeout(submitRequest, 2000);
-    } else {
-      showMessage('Connection failed after multiple attempts', 'error');
-      cleanupJsonp(script, callbackName);
+  // 3. Core submission logic
+  try {
+    // Validate payload structure
+    if (!payload || typeof payload !== 'object') {
+      throw new Error('Invalid submission data');
     }
-  };
 
-  // Create and send request
-  const submitRequest = () => {
-    try {
-      const encodedPayload = encodePayload();
-      const params = new URLSearchParams(encodedPayload);
+    // Pre-process files
+    const optimizedFiles = [];
+    let totalSize = 0;
+
+    payload.files.forEach((file, index) => {
+      // Validate individual files
+      if (file.size > MAX_FILE_SIZE) {
+        throw new Error(`File ${index + 1} exceeds 3MB limit`);
+      }
+      if (file.data.length > MAX_FILE_SIZE * 1.37) { // Base64 overhead
+        throw new Error(`File ${index + 1} encoded data too large`);
+      }
+
+      optimizedFiles.push({
+        n: file.name.substring(0, 50), // Trim long filenames
+        t: file.mimeType,
+        d: file.data,
+        s: file.size
+      });
+      totalSize += file.data.length;
+    });
+
+    // Size validation
+    if (totalSize > 5 * 1024 * 1024) { // 5MB total limit
+      throw new Error('Total files exceed 5MB combined limit');
+    }
+
+    // Build compressed payload
+    const params = new URLSearchParams({
+      // Core data
+      tn: payload.trackingNumber.substring(0, 50),
+      ph: payload.phone,
+      qt: payload.quantity,
+      pc: payload.price,
+      cp: payload.collectionPoint,
+      ct: payload.itemCategory,
       
-      // Validate URL length
-      const fullUrl = `${CONFIG.GAS_URL}?${params}`;
-      if (fullUrl.length > 1500) {
-        showMessage('Data too large - reduce file sizes', 'error');
-        throw new Error(`URL length exceeded: ${fullUrl.length} characters`);
-      }
+      // Compressed files
+      fl: encodeURIComponent(JSON.stringify(optimizedFiles)),
+      
+      // System
+      cb: callbackName,
+      v: '1.2' // API version
+    });
 
-      script.src = fullUrl;
-      script.onerror = handleError;
-      document.body.appendChild(script);
-
-    } catch (error) {
-      showMessage(`Submission error: ${error.message}`, 'error');
-      console.error('Request creation failed:', error);
-      cleanupJsonp(script, callbackName);
+    // URL length check
+    const finalURL = `${CONFIG.GAS_URL}?${params}`;
+    if (finalURL.length > MAX_URL_LENGTH) {
+      throw new Error(`Submission too large (${finalURL.length} chars)`);
     }
-  };
 
-  // Initial submission attempt
-  submitRequest();
+    // Script handling
+    script.src = finalURL;
+    script.onload = () => safeCleanup();
+    script.onerror = () => {
+      showMessage('Network error - please try again', 'error');
+      safeCleanup();
+    };
+
+    // Safe execution
+    document.body.appendChild(script);
+
+  } catch (error) {
+    safeCleanup();
+    showMessage(`Submission blocked: ${error.message}`, 'error');
+    console.error('Submission validation failed:', {
+      error,
+      payload: payload ? {
+        ...payload,
+        files: payload.files?.map(f => f.name)
+      } : null
+    });
+  }
+
+  // Add timeout cleanup
+  setTimeout(() => {
+    if (isScriptActive) {
+      showMessage('Submission timeout - check connection', 'error');
+      safeCleanup();
+    }
+  }, 15000); // 15-second timeout
 }
   
 function handleGasResponse(response) {
