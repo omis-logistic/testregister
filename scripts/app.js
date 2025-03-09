@@ -31,47 +31,53 @@ async function handleFormSubmit(e) {
   try {
     const formData = new FormData(form);
     
-    // Get and validate tracking number first
+    // 1. Validate Tracking Number
     const trackingNumber = formData.get('trackingNumber') || '';
     validateTrackingNumber(trackingNumber);
 
-    // Get and validate phone number
+    // 2. Validate Phone Number
     const phone = formData.get('phone') || '';
     validatePhoneNumber(phone);
 
-    // Validate quantity
+    // 3. Validate Quantity
     const quantity = formData.get('quantity') || '';
     validateQuantity(quantity);
 
-    // Validate price
+    // 4. Validate Price
     const price = formData.get('price') || '';
     validatePrice(price);
 
-    // Validate files
+    // 5. Validate Files
     const itemCategory = formData.get('itemCategory') || '';
-    const files = Array.from(formData.getAll('files') || []);
+    const files = Array.from(formData.getAll('files') || [];
     validateFiles(itemCategory, files);
 
-    // Process files and build payload
+    // 6. Process Files
     const processedFiles = await processFiles(files);
-    
+
+    // 7. Build Payload
     const payload = {
       trackingNumber: trackingNumber.trim(),
       phone: phone.trim(),
       itemDescription: (formData.get('itemDescription') || '').trim(),
-      quantity: quantity,
-      price: price,
+      quantity: Number(quantity),
+      price: Number(price),
       collectionPoint: formData.get('collectionPoint'),
       itemCategory: itemCategory,
       files: processedFiles
     };
 
-    console.log('Validated Payload:', payload);
-    submitViaJsonp(payload);
+    console.log('Submission Payload:', payload);
+    
+    // 8. Submit via POST
+    await submitForm(payload);
 
   } catch (error) {
     showMessage(`Error: ${error.message}`, 'error');
     console.error('Submission Error:', error);
+    
+    // Optional: Log to error tracking service
+    // logError(error);
   }
 }
 
@@ -170,15 +176,39 @@ function validateFiles(category, files) {
   });
 }
 
+// File Processor
 async function processFiles(files) {
-  return Promise.all(Array.from(files).map(async file => {
-    return {
+  return Promise.all(
+    Array.from(files).map(async file => ({
       name: file.name,
-      mimeType: file.type || 'application/octet-stream',
+      type: file.type,
       data: await toBase64(file),
       size: file.size
-    };
-  }));
+    }))
+  );
+}
+
+// Base64 Converter
+function toBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = error => reject(error);
+    reader.readAsDataURL(file);
+  });
+}
+
+// Validators (examples)
+function validateTrackingNumber(value) {
+  if (!/^[A-Z0-9\-]{3,20}$/i.test(value)) {
+    throw new Error('Invalid tracking number format');
+  }
+}
+
+function validatePhoneNumber(phone) {
+  if (!/^\d{6,15}$/.test(phone)) {
+    throw new Error('Phone must be 6-15 digits');
+  }
 }
 
 function toBase64(file) {
