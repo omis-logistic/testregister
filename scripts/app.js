@@ -171,12 +171,14 @@ function validateFiles(category, files) {
 }
 
 async function processFiles(files) {
-  return Promise.all(Array.from(files).map(async file => ({
-    name: file.name,
-    mimeType: file.type,
-    data: await toBase64(file),
-    size: file.size
-  })));
+  return Promise.all(Array.from(files).map(async file => {
+    return {
+      name: file.name,
+      mimeType: file.type || 'application/octet-stream',
+      data: await toBase64(file),
+      size: file.size
+    };
+  }));
 }
 
 function toBase64(file) {
@@ -192,35 +194,60 @@ function submitViaJsonp(payload) {
   const callbackName = `gas_${Date.now()}`;
   const script = document.createElement('script');
   
+  // Temporary payload compression
+  const compressedPayload = {
+    ...payload,
+    files: payload.files.map(file => ({
+      ...file,
+      data: file.data.slice(0, 100) // Truncate to first 100 characters
+    }))
+  };
+
+  // Set up JSONP callback
   window[callbackName] = (response) => {
-    if (!response) {
-      showMessage('No response from server', 'error');
-      return;
-    }
-    
-    if (response.success) {
+    cleanupJsonp(script, callbackName);
+    if (response?.success) {
       showMessage(response.message, 'success');
       document.getElementById('declarationForm').reset();
     } else {
-      const errorMsg = response.error || response.message || 'Unknown server error';
+      const errorMsg = response?.error || 'Unknown server error';
       showMessage(`Submission failed: ${errorMsg}`, 'error');
     }
-    cleanupJsonp(script, callbackName);
   };
 
+  // Configure error handling
   script.onerror = () => {
-    showMessage('Connection failed', 'error');
-    document.body.removeChild(script);
+    showMessage('Connection failed - retrying...', 'error');
+    cleanupJsonp(script, callbackName);
+    setTimeout(() => submitViaJsonp(payload), 2000);
   };
-  
-  const params = new URLSearchParams({
-    ...payload,
-    files: JSON.stringify(payload.files),
-    callback: callbackName
-  });
 
-  script.src = `${CONFIG.GAS_URL}?${params}`;
+  // Build URL parameters
+  const params = new URLSearchParams({
+    ...compressedPayload,
+    files: JSON.stringify(compressedPayload.files),
+    callback: callbackName
+  }).toString()
+    .replace(/%2F/g, '/')
+    .replace(/%3D/g, '=');
+
+  // Encode special characters
+  const encodedParams = encodeURI(params)
+    .replace(/'/g, "%27")
+    .replace(/"/g, "%22");
+
+  // Execute JSONP request
+  script.src = `${CONFIG.GAS_URL}?${encodedParams}`;
+  console.log('JSONP Request:', script.src);
   document.body.appendChild(script);
+
+  // Timeout cleanup
+  setTimeout(() => {
+    if (window[callbackName]) {
+      cleanupJsonp(script, callbackName);
+      showMessage('Request timed out', 'error');
+    }
+  }, 15000);
 }
   
 function handleGasResponse(response) {
