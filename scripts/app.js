@@ -204,45 +204,52 @@ function validatePhoneNumber(phone) {
   }
 }
 
-const PROXY_URL = 'https://script.google.com/macros/s/AKfycbzCsjxgx24aoNJyUaZF30yGWTUOy6Q1P-agvMDrUWJLVtTHc5CCGajLJt2sV5B-9pEiAA/exec';
+const PROXY_URL = 'https://script.google.com/macros/s/AKfycbxfuVNJHmofS0lJsHxKxicQ98XA61fOunKmREcRvGcNycVazaawmlWeubYjNVWKSWA4kQ/exec';
 
 async function submitForm(payload) {
-  showMessage('Submitting...', 'pending');
-  
-  try {
-    // 1. Submit main data
-    const submitResponse = await fetch(PROXY_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    
-    if (!submitResponse.ok) throw new Error('Submission failed');
-    
-    // 2. Verify with retries
-    let attempts = 0;
-    const checkExists = async () => {
-      attempts++;
+  // 1. Create hidden iframe for submission
+  const iframe = document.createElement('iframe');
+  iframe.style.display = 'none';
+  iframe.name = 'hidden-frame';
+  document.body.appendChild(iframe);
+
+  // 2. Create form with tracking number verification
+  const form = document.createElement('form');
+  form.style.display = 'none';
+  form.method = 'POST';
+  form.action = PROXY_URL;
+  form.target = 'hidden-frame';
+
+  // 3. Add payload to form
+  const input = document.createElement('input');
+  input.name = 'payload';
+  input.value = JSON.stringify(payload);
+  form.appendChild(input);
+
+  // 4. Submit and handle verification
+  document.body.appendChild(form);
+  form.submit();
+
+  // 5. Check submission status after delay
+  setTimeout(async () => {
+    try {
       const response = await fetch(`${PROXY_URL}?tracking=${encodeURIComponent(payload.trackingNumber)}`);
       const result = await response.json();
       
       if (result.exists) {
-        showMessage('Submission successful! ✔️', 'success');
+        showMessage('Submission successful!', 'success');
         document.getElementById('declarationForm').reset();
-      } else if (attempts < 5) {
-        setTimeout(checkExists, 2000); // Retry every 2 seconds
-        showMessage(`Verifying... (${attempts}/5)`, 'pending');
       } else {
-        throw new Error('Verification timeout');
+        showMessage('Verification failed', 'error');
       }
-    };
+    } catch (error) {
+      showMessage('Final verification check failed', 'error');
+    }
     
-    await checkExists();
-    
-  } catch (error) {
-    showMessage('Final verification failed - check spreadsheet manually', 'error');
-    console.error('Submission Error:', error);
-  }
+    // Cleanup
+    document.body.removeChild(iframe);
+    document.body.removeChild(form);
+  }, 5000);
 }
 
 async function verifySubmission(trackingNumber) {
