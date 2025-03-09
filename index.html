@@ -111,15 +111,17 @@
       </div>
 
       <div class="form-group">
-        <label for="fileUpload">Upload Files (Max 3, Required for * Categories):</label>
-        <input type="file" 
-               id="fileUpload" 
-               name="files" 
-               multiple 
-               accept="image/*, .pdf"
-               onchange="handleFileSelection(this)">
-        <small>Allowed formats: JPEG, PNG, PDF (Max 5MB each)</small>
-      </div>
+          <label for="fileUpload">Upload Files (Max 3, Required for * Categories):</label>
+          <input type="file" 
+                 id="fileUpload" 
+                 name="files"
+                 multiple
+                 accept="image/jpeg, image/png, application/pdf"
+                 aria-describedby="fileHelp">
+          <small id="fileHelp" class="form-text">
+          Allowed formats: JPEG, PNG, PDF (Max 5MB per file)
+        </small>
+</div>
 
       <div class="button-group">
         <button type="submit" class="gold-button">Submit Declaration</button>
