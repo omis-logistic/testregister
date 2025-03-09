@@ -8,9 +8,9 @@ document.getElementById('declarationForm').addEventListener('submit', async (e) 
   try {
     // Client-side validations
     const trackingNumber = formData.get('trackingNumber');
-    if (!/^[A-Za-z0-9-]+$/.test(trackingNumber)) {
-      throw new Error('Tracking number can only contain letters, numbers, and hyphens');
-    }
+    //if (!/^[A-Za-z0-9-]+$/.test(trackingNumber)) {
+    //  throw new Error('Tracking number can only contain letters, numbers, and hyphens');
+   // }
 
     if (/^-|-$/.test(trackingNumber)) {
       throw new Error('Tracking number cannot start or end with hyphen');
