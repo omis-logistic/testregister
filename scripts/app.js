@@ -204,52 +204,33 @@ function validatePhoneNumber(phone) {
   }
 }
 
-const PROXY_URL = 'https://script.google.com/macros/s/AKfycbxfuVNJHmofS0lJsHxKxicQ98XA61fOunKmREcRvGcNycVazaawmlWeubYjNVWKSWA4kQ/exec';
-
 async function submitForm(payload) {
-  // 1. Create hidden iframe for submission
-  const iframe = document.createElement('iframe');
-  iframe.style.display = 'none';
-  iframe.name = 'hidden-frame';
-  document.body.appendChild(iframe);
-
-  // 2. Create form with tracking number verification
-  const form = document.createElement('form');
-  form.style.display = 'none';
-  form.method = 'POST';
-  form.action = PROXY_URL;
-  form.target = 'hidden-frame';
-
-  // 3. Add payload to form
-  const input = document.createElement('input');
-  input.name = 'payload';
-  input.value = JSON.stringify(payload);
-  form.appendChild(input);
-
-  // 4. Submit and handle verification
-  document.body.appendChild(form);
-  form.submit();
-
-  // 5. Check submission status after delay
-  setTimeout(async () => {
-    try {
-      const response = await fetch(`${PROXY_URL}?tracking=${encodeURIComponent(payload.trackingNumber)}`);
-      const result = await response.json();
-      
-      if (result.exists) {
-        showMessage('Submission successful!', 'success');
-        document.getElementById('declarationForm').reset();
-      } else {
-        showMessage('Verification failed', 'error');
-      }
-    } catch (error) {
-      showMessage('Final verification check failed', 'error');
-    }
+  const PROXY_URL = 'https://script.google.com/macros/s/AKfycbwbKXz_s1k1zhxBLYE7aWz3Isf13k48dQ-vh28vVmrdz1xja9nEv4AZyD7xpP_n34gD-w/exec';
+  
+  try {
+    // Create temporary form
+    const tempForm = document.createElement('form');
+    tempForm.style.display = 'none';
+    tempForm.method = 'POST';
+    tempForm.action = PROXY_URL;
     
-    // Cleanup
-    document.body.removeChild(iframe);
-    document.body.removeChild(form);
-  }, 5000);
+    // Add payload to form
+    const payloadInput = document.createElement('input');
+    payloadInput.name = 'payload';
+    payloadInput.value = JSON.stringify(payload);
+    tempForm.appendChild(payloadInput);
+    
+    document.body.appendChild(tempForm);
+    tempForm.submit();
+    
+    // Verify submission after delay
+    setTimeout(() => {
+      window.location.href = `${PROXY_URL}?tracking=${encodeURIComponent(payload.trackingNumber)}`;
+    }, 5000);
+    
+  } catch (error) {
+    showMessage(`Submission error: ${error.message}`, 'error');
+  }
 }
 
 async function verifySubmission(trackingNumber) {
