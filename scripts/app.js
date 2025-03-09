@@ -205,37 +205,41 @@ function validatePhoneNumber(phone) {
 }
 
 async function submitForm(payload) {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 10000);
-
+  // Directly call Google Apps Script with CORS workaround
+  const PROXY_URL = 'https://script.google.com/macros/s/AKfycbwFP2PVzu0z_JHwTxAKxRHLiWVUCyPwd8jpGWh-hwTtbyMO2bV7cntuS5DPSTgfP3Lg6A/exec';
+  
   try {
-    const response = await fetch(CONFIG.GAS_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Requested-With': 'XMLHttpRequest'
-      },
-      body: JSON.stringify(payload),
-      signal: controller.signal,
-      mode: 'cors'
-    });
-
-    clearTimeout(timeoutId);
-
-    if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+    const form = document.createElement('form');
+    form.style.display = 'none';
+    form.method = 'POST';
+    form.action = PROXY_URL;
     
-    const result = await response.json();
+    const input = document.createElement('input');
+    input.name = 'payload';
+    input.value = JSON.stringify(payload);
     
-    if (result.success) {
-      showMessage(result.message, 'success');
-      document.getElementById('declarationForm').reset();
-    } else {
-      throw new Error(result.error || 'Submission failed');
-    }
+    form.appendChild(input);
+    document.body.appendChild(form);
+    form.submit();
+    
+    // Check result after submission
+    const checkResult = async () => {
+      const response = await fetch(PROXY_URL + '?check=' + Date.now());
+      const result = await response.json();
+      
+      if (result.success) {
+        showMessage('Submission successful!', 'success');
+        document.getElementById('declarationForm').reset();
+      } else {
+        throw new Error(result.error || 'Submission failed');
+      }
+    };
+    
+    setTimeout(checkResult, 3000);
+    
   } catch (error) {
-    clearTimeout(timeoutId);
-    showMessage(`Submission failed: ${error.message}`, 'error');
-    console.error('Network Error:', error);
+    showMessage(`Error: ${error.message}`, 'error');
+    console.error('Submission Error:', error);
   }
 }
 
