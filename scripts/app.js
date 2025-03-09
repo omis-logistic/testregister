@@ -119,7 +119,25 @@ function validatePrice(price) {
   }
 }
 
-function validateFiles(category, files) {
+function validateFileSelection(input) {
+  try {
+    const files = Array.from(input.files);
+    const category = document.getElementById('itemCategory').value;
+    
+    // Basic validation
+    validateFileCount(category, files);
+    validateFileSizes(files);
+    
+    // Show success feedback
+    showMessage(`${files.length} valid files selected`, 'success');
+    
+  } catch (error) {
+    showMessage(error.message, 'error');
+    input.value = ''; // Clear invalid files
+  }
+}
+
+function validateFileCount(category, files) {
   const starredCategories = [
     '*Books', '*Cosmetics/Skincare/Bodycare', '*Food Beverage/Drinks',
     '*Gadgets', '*Oil Ointment', '*Supplement'
@@ -129,12 +147,24 @@ function validateFiles(category, files) {
     if (files.length < 1) throw new Error('At least 1 file required');
     if (files.length > 3) throw new Error('Maximum 3 files allowed');
   }
-  
+}
+
+function validateFileSizes(files) {
   files.forEach(file => {
     if (file.size > 5 * 1024 * 1024) {
       throw new Error(`File ${file.name} exceeds 5MB limit`);
     }
   });
+}
+
+// Update processFiles function
+async function processFiles(files) {
+  return Promise.all(Array.from(files).map(async file => ({
+    name: file.name,
+    mimeType: file.type,  // Changed from 'type' to 'mimeType'
+    data: await toBase64(file),
+    size: file.size
+  })));
 }
 
 // File processing
