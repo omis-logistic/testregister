@@ -5,12 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Parcel Declaration</title>
   <link rel="stylesheet" href="./styles/main.css">
-  <script>
-    // Configuration must come first
-    const CONFIG = {
-      GAS_URL: 'https://script.google.com/macros/s/AKfycby33YbOkD-HFTrHo4KZFbEUo-jZwO8kOUvahV7AW20Ivm_tNhQRqUQQURqk4bze1Al3/exec'
-    };
-  </script>
 </head>
 <body>
   <div class="container">
@@ -18,34 +12,35 @@
     <form id="declarationForm">
       <div class="form-group">
         <label for="trackingNumber">Tracking Number:</label>
-        <input type="text" id="trackingNumber" name="trackingNumber"
-               pattern="^[A-Za-z0-9\-]+"
-               title="Letters, numbers, and hyphens only (no spaces)"
-               required>
+        <input type="text" id="trackingNumber" name="trackingNumber" 
+       pattern="^[A-Za-z0-9\-]+"
+       title="Only letters, numbers, and hyphens allowed (no spaces)"
+       required> <!-- Added required attribute -->
+              
       </div>
 
       <div class="form-group">
         <label for="phone">Phone Number:</label>
-        <input type="tel" id="phone" name="phone"
-               pattern="[0-9]{6,15}"
-               title="6-15 digits only"
-               required>
+        <input type="tel" id="phone" name="phone" 
+       pattern="[0-9]{6,}" 
+       title="Numbers only, minimum 6 digits" 
+       required>
       </div>
 
       <div class="form-group">
         <label for="itemDescription">Item Description:</label>
-        <textarea id="itemDescription" name="itemDescription" maxlength="500" required></textarea>
+        <textarea id="itemDescription" name="itemDescription" required></textarea>
       </div>
 
       <div class="form-group">
         <label for="quantity">Quantity:</label>
-        <input type="number" id="quantity" name="quantity"
+        <input type="number" id="quantity" name="quantity" 
                min="1" step="1" required>
       </div>
 
       <div class="form-group">
         <label for="price">Price:</label>
-        <input type="number" id="price" name="price"
+        <input type="number" id="price" name="price" 
                min="0" step="0.01" required>
       </div>
 
@@ -62,7 +57,6 @@
         <label for="itemCategory">Item Category:</label>
         <select id="itemCategory" name="itemCategory" required>
           <option value="">Select Category</option>
-          <!-- Alphabetical Categories -->
           <option value="Accessories/Jewellery">Accessories/Jewellery</option>
           <option value="Baby Appliances">Baby Appliances</option>
           <option value="Bag">Bag</option>
@@ -119,14 +113,16 @@
 
       <div class="form-group">
         <label for="fileUpload">Upload Files (Max 3, Required for * Categories):</label>
-        <input type="file" 
-               id="fileUpload" 
-               name="files" 
-               multiple 
-               accept="image/jpeg, image/png, application/pdf"
-               onchange="validateFileSelection(this)">
-        <small>Allowed formats: JPEG, PNG, PDF (Max 5MB each)</small>
-      </div>
+        <input 
+          type="file" 
+          id="fileUpload" 
+          name="files" 
+          multiple 
+          accept="image/*, .pdf" 
+          onchange="validateFileSelection(this)" <!-- Updated attribute -->
+          >
+        <small>Allowed formats: JPEG, PNG, PDF</small>
+        </div>
 
       <div class="button-group">
         <button type="submit" class="gold-button">Submit Declaration</button>
@@ -135,8 +131,40 @@
     </form>
     <div id="message"></div>
   </div>
+ 
+  <script>
+    const CONFIG = {
+      GAS_URL: 'https://script.google.com/macros/s/AKfycby33YbOkD-HFTrHo4KZFbEUo-jZwO8kOUvahV7AW20Ivm_tNhQRqUQQURqk4bze1Al3/exec'
+    };
 
-  <!-- Load scripts after DOM -->
+    // Complete file validation function
+    function validateFiles(input) {
+      const maxFiles = 3;
+      const starredCategories = [
+        '*Books', '*Cosmetics/Skincare/Bodycare', '*Food Beverage/Drinks',
+        '*Gadgets', '*Oil Ointment', '*Supplement'
+      ];
+      
+      // Get selected category
+      const category = document.getElementById('itemCategory').value;
+
+      // Validate file count
+      if (input.files.length > maxFiles) {
+        alert(`Maximum ${maxFiles} files allowed`);
+        input.value = '';
+        return;
+      }
+
+      // Validate mandatory files for starred categories
+      if (starredCategories.includes(category)) {
+        if (input.files.length < 1) {
+          alert(`At least 1 file required for ${category}`);
+          input.value = '';
+        }
+      }
+    }
+  </script>
+
   <script src="./scripts/app.js"></script>
 </body>
 </html>
