@@ -197,29 +197,28 @@ function submitViaJsonp(payload) {
   const script = document.createElement('script');
   
   window[callbackName] = (response) => {
-    document.body.removeChild(script);
-    delete window[callbackName];
-    
-    if (response.success) {
-      showMessage(response.message, 'success');
-      document.getElementById('declarationForm').reset();
+    cleanupJsonp(script, callbackName);
+    if (response && response.success) {
+      handleSuccess(response);
     } else {
-      showMessage(response.error || 'Submission failed', 'error');
+      handleFailure(response);
     }
   };
 
+  // Add retry mechanism
+  script.onerror = () => {
+    showMessage('Connection failed - retrying...', 'error');
+    setTimeout(() => submitViaJsonp(payload), 2000);
+  };
+  
+  // Encode parameters properly
   const params = new URLSearchParams({
     ...payload,
     files: JSON.stringify(payload.files),
     callback: callbackName
-  });
+  }).toString().replace(/%2F/g, '/');
 
   script.src = `${CONFIG.GAS_URL}?${params}`;
-  script.onerror = () => {
-    showMessage('Connection failed', 'error');
-    document.body.removeChild(script);
-  };
-  
   document.body.appendChild(script);
 }
 
