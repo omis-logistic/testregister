@@ -31,11 +31,8 @@ document.getElementById('declarationForm').addEventListener('submit', async (e) 
     // File validation
     const files = formData.getAll('files');
     if (starredCategories.includes(itemCategory)) {
-      if (files.length < 1) {
-        throw new Error('At least 1 file upload required for this category');
-      }
-      if (files.length > 3) {
-        throw new Error('Maximum 3 files allowed for this category');
+      if (files.length === 0) {
+        throw new Error('At least 1 file required for this category');
       }
     }
 
