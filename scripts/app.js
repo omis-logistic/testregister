@@ -222,7 +222,7 @@ async function submitForm(payload) {
     });
 
     // Handle opaque response
-    if (!response.ok) throw new Error('Successful!');
+    if (!response.ok) throw new Error('Network error');
     
     // For no-cors mode, we can't read response body directly
     // Add success tracking in spreadsheet
@@ -230,7 +230,7 @@ async function submitForm(payload) {
     showMessage('Submission processing...', 'pending');
 
   } catch (error) {
-    showMessage(`Submission: ${error.message}`, 'error');
+    showMessage(`Submission failed: ${error.message}`, 'error');
   }
 }
 
