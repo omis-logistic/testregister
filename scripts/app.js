@@ -49,7 +49,7 @@ async function handleFormSubmit(e) {
 
     // 5. Validate Files
     const itemCategory = formData.get('itemCategory') || '';
-    const files = Array.from(formData.getAll('files') || [];
+    const files = Array.from(formData.getAll('files') || []);
     validateFiles(itemCategory, files);
 
     // 6. Process Files
@@ -198,26 +198,10 @@ function toBase64(file) {
   });
 }
 
-// Validators (examples)
-function validateTrackingNumber(value) {
-  if (!/^[A-Z0-9\-]{3,20}$/i.test(value)) {
-    throw new Error('Invalid tracking number format');
-  }
-}
-
 function validatePhoneNumber(phone) {
   if (!/^\d{6,15}$/.test(phone)) {
     throw new Error('Phone must be 6-15 digits');
   }
-}
-
-function toBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result.split(',')[1]);
-    reader.onerror = error => reject(error);
-    reader.readAsDataURL(file);
-  });
 }
 
 async function submitForm(payload) {
@@ -264,21 +248,6 @@ async function submitForm(payload) {
     console.error('Submission failed after retries:', error);
   }
 }
-  
-function handleGasResponse(response) {
-  if (response?.success) {
-    showMessage(response.message, 'success');
-    document.getElementById('declarationForm').reset();
-  } else {
-    const errorMessage = response?.error || 'Unknown server error';
-    showMessage(`Submission failed: ${errorMessage}`, 'error');
-  }
-}
-
-function cleanupJsonp(script, callbackName) {
-  document.body.removeChild(script);
-  delete window[callbackName];
-}
 
 function showMessage(text, type) {
   const messageDiv = document.getElementById('message');
@@ -309,6 +278,6 @@ window.debugForm = {
       itemCategory: 'Clothing',
       files: []
     };
-    submitViaJsonp(testPayload);
+    submitForm(testPayload);
   }
 };
