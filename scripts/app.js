@@ -205,47 +205,37 @@ function validatePhoneNumber(phone) {
 }
 
 async function submitForm(payload) {
-  const MAX_RETRIES = 3;
-  let retryCount = 0;
-  
-  const attemptSubmission = async () => {
-    try {
-      const response = await fetch(CONFIG.GAS_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload)
-      });
-      
-      if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-      
-      const result = await response.json();
-      
-      if (result.success) {
-        showMessage(result.message, 'success');
-        document.getElementById('declarationForm').reset();
-      } else {
-        throw new Error(result.error || 'Submission failed');
-      }
-      return true;
-      
-    } catch (error) {
-      if (retryCount < MAX_RETRIES) {
-        retryCount++;
-        showMessage(`Attempt ${retryCount}/${MAX_RETRIES}...`, 'pending');
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        return attemptSubmission();
-      }
-      throw error;
-    }
-  };
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
 
   try {
-    await attemptSubmission();
+    const response = await fetch(CONFIG.GAS_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+      mode: 'cors'
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      showMessage(result.message, 'success');
+      document.getElementById('declarationForm').reset();
+    } else {
+      throw new Error(result.error || 'Submission failed');
+    }
   } catch (error) {
-    showMessage(`Final error: ${error.message}`, 'error');
-    console.error('Submission failed after retries:', error);
+    clearTimeout(timeoutId);
+    showMessage(`Submission failed: ${error.message}`, 'error');
+    console.error('Network Error:', error);
   }
 }
 
