@@ -193,24 +193,20 @@ function submitViaJsonp(payload) {
   const script = document.createElement('script');
   
   window[callbackName] = (response) => {
+    if (!response) {
+      showMessage('No response from server', 'error');
+      return;
+    }
+    
+    if (response.success) {
+      showMessage(response.message, 'success');
+      document.getElementById('declarationForm').reset();
+    } else {
+      const errorMsg = response.error || response.message || 'Unknown server error';
+      showMessage(`Submission failed: ${errorMsg}`, 'error');
+    }
     cleanupJsonp(script, callbackName);
-    handleGasResponse(response);
   };
-
-  script.onerror = () => {
-    showMessage('Connection failed - retrying...', 'error');
-    setTimeout(() => submitViaJsonp(payload), 2000);
-  };
-  
-  const params = new URLSearchParams({
-    ...payload,
-    files: JSON.stringify(payload.files),
-    callback: callbackName
-  }).toString().replace(/%2F/g, '/');
-
-  script.src = `${CONFIG.GAS_URL}?${params}`;
-  document.body.appendChild(script);
-}
 
 function handleGasResponse(response) {
   if (response?.success) {
