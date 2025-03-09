@@ -205,31 +205,41 @@ function validatePhoneNumber(phone) {
 }
 
 async function submitForm(payload) {
-  const PROXY_URL = 'https://script.google.com/macros/s/AKfycbwbKXz_s1k1zhxBLYE7aWz3Isf13k48dQ-vh28vVmrdz1xja9nEv4AZyD7xpP_n34gD-w/exec';
+  // Directly call Google Apps Script with CORS workaround
+  const PROXY_URL = 'https://script.google.com/macros/s/AKfycbye07QX-wiULCTBpzewN_ZaqmVfS_PZ3pc2DtML3xRIZpWYkYFoPGKLIK5JodQees5xrQ/exec';
   
   try {
-    // Create temporary form
-    const tempForm = document.createElement('form');
-    tempForm.style.display = 'none';
-    tempForm.method = 'POST';
-    tempForm.action = PROXY_URL;
+    const form = document.createElement('form');
+    form.style.display = 'none';
+    form.method = 'POST';
+    form.action = PROXY_URL;
     
-    // Add payload to form
-    const payloadInput = document.createElement('input');
-    payloadInput.name = 'payload';
-    payloadInput.value = JSON.stringify(payload);
-    tempForm.appendChild(payloadInput);
+    const input = document.createElement('input');
+    input.name = 'payload';
+    input.value = JSON.stringify(payload);
     
-    document.body.appendChild(tempForm);
-    tempForm.submit();
+    form.appendChild(input);
+    document.body.appendChild(form);
+    form.submit();
     
-    // Verify submission after delay
-    setTimeout(() => {
-      window.location.href = `${PROXY_URL}?tracking=${encodeURIComponent(payload.trackingNumber)}`;
-    }, 5000);
+    // Check result after submission
+    const checkResult = async () => {
+      const response = await fetch(PROXY_URL + '?check=' + Date.now());
+      const result = await response.json();
+      
+      if (result.success) {
+        showMessage('Submission successful!', 'success');
+        document.getElementById('declarationForm').reset();
+      } else {
+        throw new Error(result.error || 'Submission failed');
+      }
+    };
+    
+    setTimeout(checkResult, 3000);
     
   } catch (error) {
-    showMessage(`Submission error: ${error.message}`, 'error');
+    showMessage(`Error: ${error.message}`, 'error');
+    console.error('Submission Error:', error);
   }
 }
 
