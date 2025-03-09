@@ -13,18 +13,17 @@
       <div class="form-group">
         <label for="trackingNumber">Tracking Number:</label>
         <input type="text" id="trackingNumber" name="trackingNumber" 
-       pattern="^[A-Za-z0-9\-]+"
-       title="Only letters, numbers, and hyphens allowed (no spaces)"
-       required> <!-- Added required attribute -->
-              
+               pattern="^[A-Za-z0-9\-]+"
+               title="Only letters, numbers, and hyphens allowed (no spaces)"
+               required>
       </div>
 
       <div class="form-group">
         <label for="phone">Phone Number:</label>
         <input type="tel" id="phone" name="phone" 
-       pattern="[0-9]{6,}" 
-       title="Numbers only, minimum 6 digits" 
-       required>
+               pattern="[0-9]{6,}" 
+               title="Numbers only, minimum 6 digits" 
+               required>
       </div>
 
       <div class="form-group">
@@ -113,55 +112,78 @@
 
       <div class="form-group">
         <label for="fileUpload">Upload Files (Max 3, Required for * Categories):</label>
-        <input 
-          type="file" 
-          id="fileUpload" 
-          name="files" 
-          multiple 
-          accept="image/*, .pdf" 
-          onchange="validateFileSelection(this)" <!-- Updated attribute -->
-          >
-        <small>Allowed formats: JPEG, PNG, PDF</small>
-        </div>
+        <input type="file" 
+               id="fileUpload" 
+               name="files" 
+               multiple 
+               accept="image/*, .pdf"
+               onchange="handleFileSelection(this)">
+        <small>Allowed formats: JPEG, PNG, PDF (Max 5MB each)</small>
+      </div>
 
       <div class="button-group">
         <button type="submit" class="gold-button">Submit Declaration</button>
         <button type="button" class="gold-button" disabled>Back to Dashboard</button>
       </div>
     </form>
-    <div id="message"></div>
+    <div id="message" aria-live="polite"></div>
   </div>
- 
+
   <script>
     const CONFIG = {
       GAS_URL: 'https://script.google.com/macros/s/AKfycby33YbOkD-HFTrHo4KZFbEUo-jZwO8kOUvahV7AW20Ivm_tNhQRqUQQURqk4bze1Al3/exec'
     };
 
-    // Complete file validation function
-    function validateFiles(input) {
-      const maxFiles = 3;
-      const starredCategories = [
-        '*Books', '*Cosmetics/Skincare/Bodycare', '*Food Beverage/Drinks',
-        '*Gadgets', '*Oil Ointment', '*Supplement'
-      ];
-      
-      // Get selected category
-      const category = document.getElementById('itemCategory').value;
+    function handleFileSelection(input) {
+      try {
+        const files = Array.from(input.files || []);
+        const category = document.getElementById('itemCategory').value;
+        const starredCategories = [
+          '*Books', '*Cosmetics/Skincare/Bodycare', '*Food Beverage/Drinks',
+          '*Gadgets', '*Oil Ointment', '*Supplement'
+        ];
 
-      // Validate file count
-      if (input.files.length > maxFiles) {
-        alert(`Maximum ${maxFiles} files allowed`);
-        input.value = '';
-        return;
-      }
-
-      // Validate mandatory files for starred categories
-      if (starredCategories.includes(category)) {
-        if (input.files.length < 1) {
-          alert(`At least 1 file required for ${category}`);
-          input.value = '';
+        // Validate file count
+        if (files.length > 3) {
+          throw new Error('Maximum 3 files allowed');
         }
+
+        // Validate mandatory files for starred categories
+        if (starredCategories.includes(category)) {
+          if (files.length < 1) {
+            throw new Error(`At least 1 file required for ${category}`);
+          }
+        }
+
+        // Validate individual files
+        files.forEach(file => {
+          if (file.size > 5 * 1024 * 1024) {
+            throw new Error(`File ${file.name} exceeds 5MB limit`);
+          }
+          if (!['image/jpeg', 'image/png', 'application/pdf'].includes(file.type)) {
+            throw new Error(`Invalid file type: ${file.type}`);
+          }
+        });
+
+        showMessage(`${files.length} valid files selected`, 'success');
+      } catch (error) {
+        showMessage(error.message, 'error');
+        input.value = '';
       }
+    }
+
+    function showMessage(text, type) {
+      const messageDiv = document.getElementById('message');
+      if (!messageDiv) return;
+      
+      messageDiv.textContent = text;
+      messageDiv.className = `message ${type}`;
+      
+      clearTimeout(messageDiv.timeout);
+      messageDiv.timeout = setTimeout(() => {
+        messageDiv.textContent = '';
+        messageDiv.className = 'message';
+      }, type === 'error' ? 8000 : 5000);
     }
   </script>
 
