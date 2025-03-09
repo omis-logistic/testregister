@@ -31,41 +31,70 @@ async function handleFormSubmit(e) {
   try {
     const formData = new FormData(form);
     
-    // Validate inputs
-    validateTrackingNumber(formData.get('trackingNumber'));
-    validatePhoneNumber(formData.get('phone'));
-    validateQuantity(formData.get('quantity'));
-    validatePrice(formData.get('price'));
-    validateFiles(
-      formData.get('itemCategory'),
-      formData.getAll('files')
-    );
+    // Get and validate tracking number first
+    const trackingNumber = formData.get('trackingNumber') || '';
+    validateTrackingNumber(trackingNumber);
 
+    // Get and validate phone number
+    const phone = formData.get('phone') || '';
+    validatePhoneNumber(phone);
+
+    // Validate quantity
+    const quantity = formData.get('quantity') || '';
+    validateQuantity(quantity);
+
+    // Validate price
+    const price = formData.get('price') || '';
+    validatePrice(price);
+
+    // Validate files
+    const itemCategory = formData.get('itemCategory') || '';
+    const files = formData.getAll('files');
+    validateFiles(itemCategory, files);
+
+    // Process files and build payload
+    const processedFiles = await processFiles(files);
+    
     const payload = {
-      trackingNumber: formData.get('trackingNumber'),
-      phone: formData.get('phone'),
-      itemDescription: formData.get('itemDescription'),
-      quantity: formData.get('quantity'),
-      price: formData.get('price'),
+      trackingNumber: trackingNumber.trim(),
+      phone: phone.trim(),
+      itemDescription: (formData.get('itemDescription') || '').trim(),
+      quantity: quantity,
+      price: price,
       collectionPoint: formData.get('collectionPoint'),
-      itemCategory: formData.get('itemCategory'),
-      files: await processFiles(formData.getAll('files'))
+      itemCategory: itemCategory,
+      files: processedFiles
     };
 
     console.log('Validated Payload:', payload);
     submitViaJsonp(payload);
+
   } catch (error) {
     showMessage(`Error: ${error.message}`, 'error');
     console.error('Submission Error:', error);
+    // Optional: Log to analytics service
+    // logErrorToService(error);
   }
 }
 
 function validateTrackingNumber(value) {
-  if (!/^[A-Za-z0-9\-]+$/.test(value)) {
+  // Add null/empty check
+  if (!value || typeof value !== 'string') {
+    throw new Error('Tracking number is required');
+  }
+
+  // Trim whitespace
+  const trimmedValue = value.trim();
+  
+  if (trimmedValue.length === 0) {
+    throw new Error('Tracking number cannot be empty');
+  }
+
+  if (!/^[A-Za-z0-9\-]+$/.test(trimmedValue)) {
     throw new Error('Tracking number contains invalid characters');
   }
   
-  if (value.startsWith('-') || value.endsWith('-')) {
+  if (trimmedValue.startsWith('-') || trimmedValue.endsWith('-')) {
     throw new Error('Tracking number cannot start/end with hyphen');
   }
 }
