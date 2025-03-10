@@ -31,54 +31,68 @@ async function handleFormSubmit(e) {
   try {
     const formData = new FormData(form);
     
-    // 1. Validate Tracking Number
+    // Get and validate core fields
     const trackingNumber = formData.get('trackingNumber') || '';
     validateTrackingNumber(trackingNumber);
-
-    // 2. Validate Phone Number
+    
     const phone = formData.get('phone') || '';
     validatePhoneNumber(phone);
 
-    // 3. Validate Quantity
     const quantity = formData.get('quantity') || '';
     validateQuantity(quantity);
 
-    // 4. Validate Price
     const price = formData.get('price') || '';
     validatePrice(price);
 
-    // 5. Validate Files
+    // File handling
     const itemCategory = formData.get('itemCategory') || '';
-    const files = Array.from(formData.getAll('files') || []);
-    validateFiles(itemCategory, files);
+    const rawFiles = Array.from(formData.getAll('files') || []);
+    
+    // Filter out empty files first
+    const validFiles = rawFiles.filter(file => file.size > 0);
+    
+    // Validate only if required category
+    validateFiles(itemCategory, validFiles);
 
-    // 6. Process Files
-    const processedFiles = await processFiles(files);
-
-    // 7. Build Payload
+    // Process and submit
+    const processedFiles = await processFiles(validFiles);
+    
     const payload = {
       trackingNumber: trackingNumber.trim(),
       phone: phone.trim(),
       itemDescription: (formData.get('itemDescription') || '').trim(),
-      quantity: Number(quantity),
-      price: Number(price),
+      quantity: quantity,
+      price: price,
       collectionPoint: formData.get('collectionPoint'),
       itemCategory: itemCategory,
       files: processedFiles
     };
 
-    console.log('Submission Payload:', payload);
-    
-    // 8. Submit via POST
-    await submitForm(payload);
+    submitViaJsonp(payload);
 
   } catch (error) {
     showMessage(`Error: ${error.message}`, 'error');
-    console.error('Submission Error:', error);
-    
-    // Optional: Log to error tracking service
-    // logError(error);
   }
+}
+
+function validateFiles(category, files) {
+  const starredCategories = [
+    '*Books', '*Cosmetics/Skincare/Bodycare', '*Food Beverage/Drinks',
+    '*Gadgets', '*Oil Ointment', '*Supplement'
+  ];
+
+  // 1. Validate file requirements for starred categories
+  if (starredCategories.includes(category)) {
+    if (files.length < 1) throw new Error('At least 1 file required');
+    if (files.length > 3) throw new Error('Maximum 3 files allowed');
+  }
+
+  // 2. Validate file sizes for all uploaded files
+  files.forEach(file => {
+    if (file.size > 5 * 1024 * 1024) {
+      throw new Error(`File "${file.name}" exceeds 5MB limit`);
+    }
+  });
 }
 
 function validateTrackingNumber(value) {
