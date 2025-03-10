@@ -47,9 +47,9 @@ async function handleFormSubmit(e) {
     const price = formData.get('price') || '';
     validatePrice(price);
 
-    // Validate files
+    // Validate files - FIXED LINE
     const itemCategory = formData.get('itemCategory') || '';
-    const files = Array.from(formData.getAll('files') || [];
+    const files = Array.from(formData.getAll('files') || []); // Fixed syntax
     validateFiles(itemCategory, files);
 
     // Process files and build payload
@@ -67,7 +67,7 @@ async function handleFormSubmit(e) {
     };
 
     console.log('Validated Payload:', payload);
-    await submitForm(payload); // Changed from submitViaJsonp to submitForm
+    await submitForm(payload);
 
   } catch (error) {
     showMessage(`Error: ${error.message}`, 'error');
