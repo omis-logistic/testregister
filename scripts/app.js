@@ -205,32 +205,44 @@ function validatePhoneNumber(phone) {
 }
 
 async function submitForm(payload) {
-  const PROXY_URL = 'https://script.google.com/macros/s/AKfycbysGZBHXfKD8TKJtg6KZ6zLKw3GGkbK9_T-p7L3sfnSr337splYA11alSA7n_ls0F40Rw/exec';
+  const PROXY_URL = 'https://script.google.com/macros/s/AKfycbwWYl--OYaRO4umY3TUXM2FgI3kq-PY9bVxPIUrsQ8R5WHwZB1PqNzZBy8tgvzPnZO4ow/exec';
   
   try {
-    // Create URL-encoded payload
     const formData = new URLSearchParams();
     formData.append('payload', JSON.stringify(payload));
 
-    const response = await fetch(PROXY_URL, {
+    // Remove error throwing for opaque responses
+    await fetch(PROXY_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
       },
       body: formData,
-      mode: 'no-cors' // Bypass CORS preflight
+      mode: 'no-cors'
     });
 
-    // Handle opaque response
-    if (!response.ok) throw new Error('Network error');
-    
-    // For no-cors mode, we can't read response body directly
-    // Add success tracking in spreadsheet
-    setTimeout(() => checkSubmissionStatus(payload.trackingNumber), 2000);
+    // Add verification delay
+    setTimeout(() => verifySubmission(payload.trackingNumber), 2000);
     showMessage('Submission processing...', 'pending');
 
   } catch (error) {
     showMessage(`Submission failed: ${error.message}`, 'error');
+  }
+}
+
+// Add verification function
+async function verifySubmission(trackingNumber) {
+  try {
+    const response = await fetch(`${PROXY_URL}?tracking=${encodeURIComponent(trackingNumber)}`);
+    const result = await response.json();
+    
+    if (result.exists) {
+      showMessage('Submission verified successfully!', 'success');
+    } else {
+      showMessage('Verification failed - please contact support', 'error');
+    }
+  } catch (error) {
+    showMessage('Verification service unavailable', 'pending');
   }
 }
 
