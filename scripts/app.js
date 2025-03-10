@@ -31,31 +31,29 @@ async function handleFormSubmit(e) {
   try {
     const formData = new FormData(form);
     
-    // Get and validate core fields
+    // Get and validate tracking number first
     const trackingNumber = formData.get('trackingNumber') || '';
     validateTrackingNumber(trackingNumber);
-    
+
+    // Get and validate phone number
     const phone = formData.get('phone') || '';
     validatePhoneNumber(phone);
 
+    // Validate quantity
     const quantity = formData.get('quantity') || '';
     validateQuantity(quantity);
 
+    // Validate price
     const price = formData.get('price') || '';
     validatePrice(price);
 
-    // File handling
+    // Validate files
     const itemCategory = formData.get('itemCategory') || '';
-    const rawFiles = Array.from(formData.getAll('files') || []);
-    
-    // Filter out empty files first
-    const validFiles = rawFiles.filter(file => file.size > 0);
-    
-    // Validate only if required category
-    validateFiles(itemCategory, validFiles);
+    const files = Array.from(formData.getAll('files') || [];
+    validateFiles(itemCategory, files);
 
-    // Process and submit
-    const processedFiles = await processFiles(validFiles);
+    // Process files and build payload
+    const processedFiles = await processFiles(files);
     
     const payload = {
       trackingNumber: trackingNumber.trim(),
@@ -68,10 +66,12 @@ async function handleFormSubmit(e) {
       files: processedFiles
     };
 
-    submitViaJsonp(payload);
+    console.log('Validated Payload:', payload);
+    await submitForm(payload); // Changed from submitViaJsonp to submitForm
 
   } catch (error) {
     showMessage(`Error: ${error.message}`, 'error');
+    console.error('Submission Error:', error);
   }
 }
 
