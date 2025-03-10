@@ -170,8 +170,12 @@ function validateFiles(category, files) {
   }
 
   fileList.forEach(file => {
+    // Add empty file validation
+    if (file.size === 0) {
+      throw new Error(`File "${file.name}" is empty`);
+    }
     if (file.size > 5 * 1024 * 1024) {
-      throw new Error(`File ${file.name} exceeds 5MB limit`);
+      throw new Error(`File "${file.name}" exceeds 5MB limit`);
     }
   });
 }
@@ -205,7 +209,7 @@ function validatePhoneNumber(phone) {
 }
 
 async function submitForm(payload) {
-  const PROXY_URL = 'https://script.google.com/macros/s/AKfycbytxjuJG7iqXkHlyoD6oEAe0r4NuWyiJ19V_S2kgD9asPwGcdL5pJ1bH7pwAD-c_FCb4g/exec';
+  const PROXY_URL = 'https://script.google.com/macros/s/AKfycbzv63TqYrATOzeOSSpyyEtxoRh6EliNHia9-ei-36kWju3ktCxtG5UpFV8nZB3tgvfruA/exec';
   
   try {
     const formData = new URLSearchParams();
