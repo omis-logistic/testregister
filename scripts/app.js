@@ -31,44 +31,45 @@ async function handleFormSubmit(e) {
   try {
     const formData = new FormData(form);
     
-    // Get and validate tracking number first
+    // Get core form values
     const trackingNumber = formData.get('trackingNumber') || '';
-    validateTrackingNumber(trackingNumber);
-
-    // Get and validate phone number
     const phone = formData.get('phone') || '';
-    validatePhoneNumber(phone);
-
-    // Validate quantity
     const quantity = formData.get('quantity') || '';
-    validateQuantity(quantity);
-
-    // Validate price
     const price = formData.get('price') || '';
+    const itemCategory = formData.get('itemCategory') || '';
+    const itemDescription = (formData.get('itemDescription') || '').trim();
+
+    // Validate core fields
+    validateTrackingNumber(trackingNumber);
+    validatePhoneNumber(phone);
+    validateQuantity(quantity);
     validatePrice(price);
 
-    // Validate files - FIXED LINE
-    const itemCategory = formData.get('itemCategory') || '';
-    const files = Array.from(formData.getAll('files') || []); // Fixed syntax
-    validateFiles(itemCategory, files);
+    // Process files
+    const rawFiles = Array.from(formData.getAll('files') || []);
+    const validFiles = rawFiles.filter(file => file.size > 0);
+    
+    // File validation
+    validateFiles(itemCategory, validFiles);
 
-    // Process files and build payload
-    const processedFiles = await processFiles(files);
+    // Prepare payload
+    const processedFiles = await processFiles(validFiles);
     
     const payload = {
       trackingNumber: trackingNumber.trim(),
       phone: phone.trim(),
-      itemDescription: (formData.get('itemDescription') || '').trim(),
-      quantity: quantity,
-      price: price,
+      itemDescription,
+      quantity,
+      price,
       collectionPoint: formData.get('collectionPoint'),
-      itemCategory: itemCategory,
+      itemCategory,
       files: processedFiles
     };
 
-    console.log('Validated Payload:', payload);
+    // Submit data
     await submitForm(payload);
 
+    // Success handled in verification check
   } catch (error) {
     showMessage(`Error: ${error.message}`, 'error');
     console.error('Submission Error:', error);
@@ -83,12 +84,19 @@ function validateFiles(category, files) {
 
   // 1. Validate file requirements for starred categories
   if (starredCategories.includes(category)) {
-    if (files.length < 1) throw new Error('At least 1 file required');
-    if (files.length > 3) throw new Error('Maximum 3 files allowed');
+    if (files.length < 1) {
+      throw new Error('At least 1 file required for this category');
+    }
+    if (files.length > 3) {
+      throw new Error('Maximum 3 files allowed for this category');
+    }
   }
 
-  // 2. Validate file sizes for all uploaded files
+  // 2. Validate individual files (only if files exist)
   files.forEach(file => {
+    if (file.size === 0) {
+      throw new Error(`File "${file.name}" is empty`);
+    }
     if (file.size > 5 * 1024 * 1024) {
       throw new Error(`File "${file.name}" exceeds 5MB limit`);
     }
@@ -171,39 +179,14 @@ function validateFileSizes(files) {
   });
 }
 
-function validateFiles(category, files) {
-  const fileList = Array.isArray(files) ? files : [];
-  const starredCategories = [
-    '*Books', '*Cosmetics/Skincare/Bodycare', '*Food Beverage/Drinks',
-    '*Gadgets', '*Oil Ointment', '*Supplement'
-  ];
-
-  if (starredCategories.includes(category)) {
-    if (fileList.length < 1) throw new Error('At least 1 file required');
-    if (fileList.length > 3) throw new Error('Maximum 3 files allowed');
-  }
-
-  fileList.forEach(file => {
-    // Add empty file validation
-    if (file.size === 0) {
-      throw new Error(`File "${file.name}" is empty`);
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      throw new Error(`File "${file.name}" exceeds 5MB limit`);
-    }
-  });
-}
-
 // File Processor
 async function processFiles(files) {
-  return Promise.all(
-    Array.from(files).map(async file => ({
-      name: file.name,
-      type: file.type,
-      data: await toBase64(file),
-      size: file.size
-    }))
-  );
+  return Promise.all(files.map(async file => ({
+    name: file.name,
+    mimeType: file.type,
+    data: await toBase64(file),
+    size: file.size
+  }));
 }
 
 // Base64 Converter
